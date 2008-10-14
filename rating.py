@@ -63,12 +63,15 @@ class DatabaseWalker:
         base, junk = filename.split('_DM')
         rfn = os.path.join(dir,pfd_filename)
         if not os.path.exists(rfn):
-            if False:
-                # FIXME: double-check none starts with /
-                tar = tarfile.open(os.path.join(path,base+"_pfd.tgz"),"r")
-                tar.extract_all(dir)
+            # FIXME: double-check none starts with /
+            tgz_path = os.path.join(path,base+"_pfd.tgz")
+            tar_path = os.path.join(path,base+"_pfd.tar")
+            if os.path.exists(tar_path):
+                subprocess.call(["tar","-C",dir,"-x","-f",tar_path])
+            elif os.path.exists(tgz_path):
+                subprocess.call(["tar","-C",dir,"-x","-z","-f",tgz_path])
             else:
-                subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
+                raise ValueError("Cannot find tar file")
         return prepfold.pfd(rfn)
 
     def run_by_cand_id(self,pdm_cand_id):
@@ -243,5 +246,5 @@ def manual_classification(DBconn,candidate):
 
 
 def usual_database():
-    import DRIFT_config as c
+    import config as c
     return MySQLdb.connect(host=c.host,db=c.database_v2,user=c.usrname,passwd=c.pw)
