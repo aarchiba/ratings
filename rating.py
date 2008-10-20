@@ -11,6 +11,7 @@ import numpy as np
 
 import prepfold
 
+import config as c
 
 def get_one(cursor,cmd,arg=None):
     cursor.execute(cmd,arg)
@@ -61,8 +62,13 @@ class DatabaseWalker:
 
         path = f["path"]
         base, junk = filename.split('_DM')
-        beam = base.split("_")[-1][0] # PALFA beam number
-	rfn = os.path.join(dir,beam,pfd_filename) # PALFA pfd files are inside subdirectory in tarball
+        if c.survey=="PALFA":
+            beam = base.split("_")[-1][0] # PALFA beam number
+            rfn = os.path.join(dir,beam,pfd_filename) # PALFA pfd files are inside subdirectory in tarball
+        elif c.survey=="DRIFT":
+            rfn = os.path.join(dir,pfd_filename)
+        else:
+            raise ValueError("Unknown survey '%s'" % c.survey)
         if not os.path.exists(rfn):
             # FIXME: double-check none starts with /
             
@@ -70,21 +76,21 @@ class DatabaseWalker:
 	    tgz_path = os.path.join(path,base+".tgz")
             tar_path = os.path.join(path,base+".tar")
 	    tar_gz_path = os.path.join(path,base+".tar.gz")
-            pdf_tgz_path = os.path.join(path,base+"_pfd.tgz")
-            pdf_tar_path = os.path.join(path,base+"_pfd.tar")
-	    pdf_tar_gz_path = os.path.join(path,base+"_pfd.tar.gz")
+            pfd_tgz_path = os.path.join(path,base+"_pfd.tgz")
+            pfd_tar_path = os.path.join(path,base+"_pfd.tar")
+	    pfd_tar_gz_path = os.path.join(path,base+"_pfd.tar.gz")
 	    if os.path.exists(tar_path):
                 subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-f",tar_path])
             elif os.path.exists(tgz_path):
                 subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",tgz_path])
             elif os.path.exists(tar_gz_path):
                 subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",tar_gz_path])
-	    elif os.path.exists(pdf_tar_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-f",pdf_tar_path])
-            elif os.path.exists(pdf_tgz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pdf_tgz_path])
-            elif os.path.exists(pdf_tar_gz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pdf_tar_gz_path])
+	    elif os.path.exists(pfd_tar_path):
+                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-f",pfd_tar_path])
+            elif os.path.exists(pfd_tgz_path):
+                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pfd_tgz_path])
+            elif os.path.exists(pfd_tar_gz_path):
+                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pfd_tar_gz_path])
             else:
                 raise ValueError("Cannot find tar file")
 	return prepfold.pfd(rfn)
