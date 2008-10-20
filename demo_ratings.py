@@ -27,6 +27,7 @@ elif c.survey == "DRIFT":
     }
 else:
     pdm_cand_ids = {}
+    raise ValueError("Unknown survey '%s', no demo candidates available" % c.survey)
 
 def demo_rating(rating):
     for (n,i) in sorted([(n,i) for (i,n) in pdm_cand_ids.items()]):
