@@ -5,6 +5,7 @@ def main():
     import harmonic_rating
     import pfd_ratings
     import profile_ratings
+    import known_pulsar_rating
 
     if len(sys.argv) > 1:
         where_clause = ' '.join(sys.argv[1:])
@@ -14,7 +15,10 @@ def main():
 
     times = []
 
-    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating]:
+# Oct. 28, 2008 - Gaussian fitting is currently broken. Don't apply those ratings.
+#    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
+
+    for R in [profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
 	r = R(rating.usual_database())
 	t1 = datetime.datetime.now()
 	print "%s: Working on %s" % (t1.strftime("%c"), r.name)

@@ -24,7 +24,17 @@ class DatabaseWalker:
         self.with_files = with_files
 
     def run(self,where_clause=None):
-        self.DBcursor.execute("SELECT * FROM headers")
+        if where_clause is None:
+	    self.DBcursor.execute("SELECT * FROM headers")
+        else:
+	    try:
+		self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN headers USING(header_id) WHERE %s GROUP BY header_id" % where_clause)
+	    except MySQLdb.OperationalError:
+		print "Error in MySQL query!"
+		print "Prefix fields with table name abbreviation:" 
+		print "\t(table_name.field_name)."
+		sys.exit(1)
+		
         for hdr in self.DBcursor.fetchall():
             if where_clause is None:
                 self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
