@@ -60,7 +60,7 @@ class GaussianHeight(ProfileRating):
 
     def rate_profile(self,hdr,candidate,profile,std):
         G = fit_gaussian.fit_gaussian(profile)
-        return G.amplitude()/np.std(profile-G.histogram(len(profile)))
+        return G.amplitude(len(profile))/np.std(profile-G.histogram(len(profile)))
 
 class GaussianWidth(ProfileRating):
     def __init__(self, DBconn):

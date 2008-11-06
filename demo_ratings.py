@@ -83,8 +83,8 @@ if __name__=='__main__':
     global cand_ratings
     cand_ratings = {}
     rating_objects = []
-#    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating,known_pulsar_rating.KnownPulsarRating]:
-    for R in [known_pulsar_rating.KnownPulsarRating]:
+    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating,known_pulsar_rating.KnownPulsarRating]:
+    #for R in [known_pulsar_rating.KnownPulsarRating]:
         r = R(rating.usual_database())
 	rating_objects.append(r)
 	print r.name

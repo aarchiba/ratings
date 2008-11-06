@@ -8,7 +8,7 @@ def vonmises_coefficient(k,m):
 def vonmises_values(k,mu,xs):
     D = scipy.stats.vonmises(k,scale=1./(2*np.pi))
     return D.pdf((xs-mu)%1)
-def vonmises_histogram(k,mu,n,factor=4):
+def vonmises_histogram(k,mu,n,factor=2):
     if n%1:
         raise ValueError("n must be even")
     m = ((n*factor)//2+1)
@@ -111,8 +111,8 @@ def fit_gaussian(profile):
         right = ks[pos-1]
 
     k = scipy.optimize.fminbound(lambda k: rms_residual(k,profile), left, right)
-    print left, k, right
-    print rms_residual(k,profile)
+    #print left, k, right
+    #print rms_residual(k,profile)
 
     mu, a, b = fit_all_but_k(k, profile)
     
