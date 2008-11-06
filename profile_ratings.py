@@ -51,7 +51,7 @@ class GaussianHeight(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Gaussian Height",
-            2,
+            3,
             """Compute the height of the best-fit Gaussian over the RMS amplitude.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -66,7 +66,7 @@ class GaussianWidth(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Gaussian Width",
-            1,
+            2,
             """Compute the full width at half maxiumum of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
