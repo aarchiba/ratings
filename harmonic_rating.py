@@ -3,7 +3,7 @@ import numpy as np
 import rating
 
 version = 1
-n = 54
+n = 90
 
 
 class HarmonicRating(rating.DatabaseRater):
