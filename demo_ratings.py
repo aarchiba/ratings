@@ -15,12 +15,13 @@ if c.survey == "PALFA":
     477058: "- Known pulsar (J1929+1905)",
     591295: "- Known pulsar (J1919+13) w/ nice RFI burst",
     570099: "- Known pulsar (J1855+02) w/ nice RFI burst",
-    663819: "- New MSP, 2.15 ms",
+    663819: "- New PALFA MSP, 2.15 ms",
     157246: "- Noise, 3.21 ms",
     434756: "- Known MSP, bright (J1910+1256)",
-    618994: "- Pulsar. Short duration (2 time bins) #1",
-    624594: "- Pulsar. Short duration (2 time bins) #2",
-    438102:"- Pulsar. Disappears after 200s",	
+    618994: "- Known pulsar, Short duration (2 time bins) #1",
+    624594: "- Known pulsar, Short duration (2 time bins) #2",
+    438103: "- Known pulsar (DMB)",
+    438102:"- Known pulsar (DMB), disappears after 200s",	
     2802: "- RFI wrapped at nonzero DM",
     368835: "- RFI(?), nulling, DM slightly high",
     34082: "- RFI with wandering pulse vs time",
@@ -47,15 +48,23 @@ if c.survey == "PALFA":
     283742: "- 17th harmonic of PSR J1850+0026",
     223682: "- 29th harmonic of PSR B2002+31",
     223683: "- 31st harmonic of PSR B2002+31",
+    297624: "- 90th harmonic of PSR B1900+06",
     38479: "- Integer ratio (3/8) of pulsar period (J1921+0812)",	
     184526: "- Integer ratio (5/16) of pulsar period (B1915+13)",
     297610: "- Integer ratio (5/33) of pulsar period (J1900+06)",
+    297608: "- Integer ratio (3/28) of pulsar period (J1900+06)",
     297601: "- Integer ratio (2/25) of pulsar period (J1900+06)",
     432680: "- Integer ratio (3/25) of pulsar period (J1844+00)",
     98999: "- RFI with two pulses",
-    46908: "- Sub-millisecond candidate 1",
-    70081: "- Sub-millisecond candidate 2",
-    4303: "- Sub-millisecond candidate 3",	
+    46908: "- Sub-millisecond candidate  1",
+    70081: "- Sub-millisecond candidate  2",
+    4303: "- Sub-millisecond candidate  3",	
+    466616: "- Sub-millisecond candidate  4",
+    397570: "- Sub-millisecond candidate  5",
+    433056: "- Sub-millisecond candidate  6",
+    492249: "- Sub-millisecond candidate  7",
+    434962: "- Sub-millisecond candidate  8",
+    334718: "- Sub-millisecond candidate  9",
     93300: "- Candidate MSP at DM=823(!)",
     294242: "- RFI, very artificial RFI signal",
     275603: "- RFI, saw-tooth pulses",	
@@ -66,6 +75,9 @@ if c.survey == "PALFA":
     293226: "- Ambiguous candidate  5",
     307906: "- Ambiguous candidate  6",
     303103: "- Ambiguous candidate  7",
+    397570: "- Ambiguous candidate  8",
+    317720: "- Ambiguous candidate  9",
+    650895: "- Ambiguous candidate 10",
     470608: "- No obvious pulses",	
     603449: "- RFI with multiple pulses",
     298491: "- RFI with pulsar-like DM 1",
@@ -87,7 +99,9 @@ if c.survey == "PALFA":
     597346: "- RFI, at 1000 Hz",
     560447: "- RFI, at 1.5 ms",
     587608: "- RFI, at 2.76 ms",
-    549070: "- RFI, at 500 Hz",
+    549070: "- RFI, at 500 Hz #1",
+    566317: "- RFI, at 500 Hz #2",
+    301499: "- RFI, at 400 Hz",
     598694: "- RFI, at 250 Hz",
     297289: "- RFI, strong 1",
     592453: "- RFI, strong 2",
@@ -127,9 +141,15 @@ if __name__=='__main__':
     global cand_ratings
     cand_ratings = {}
     rating_objects = []
-    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating,known_pulsar_rating.KnownPulsarRating]:
-#    for R in [profile_ratings.GaussianHeight]:
+
+
+#    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating,known_pulsar_rating.KnownPulsarRating]:
 #    for R in [known_pulsar_rating.KnownPulsarRating]:
+#    for R in [harmonic_rating.HarmonicRating]:
+    for R in [profile_ratings.GaussianHeight]:
+#    for R in [profile_ratings.GaussianWidth]:
+#    for R in [pfd_ratings.RatioRating]:
+
         r = R(rating.usual_database())
 	rating_objects.append(r)
 	print r.name

@@ -2,7 +2,7 @@ import numpy as np
 #import math
 import rating
 
-version = 0
+version = 1
 n = 1833
 #psr_period=[]
 #psr_name=[]
@@ -25,10 +25,19 @@ class KnownPulsarRating(rating.DatabaseRater):
     def __init__(self,DBconn):
         rating.DatabaseRater.__init__(self,DBconn,version=version,
             name="Known Pulsar Rating",
-            description="""Evaluate how close the barycentric period is to a known pulsar, its harmonics.
+            description="""Evaluate how close the barycentric period is to a known pulsar, its harmonics (up to 99th), or an integer-ratio-multiple of a known pulsar period.
 
-	Considers all pulsars from the ATNF catalog, as well as known PALFA and DMB pulsars. If the RA -and- Dec separations between the candidate and known pulsar is less than 10 arcmin. The fractional difference between the candidate's period and this period is computed.  """,
+	Considers all pulsars from the ATNF catalog, as well as known PALFA and DMB pulsars. The known pulsar P, Ra, Dec, and DM are stored in knownpulsars_periods.txt, knownpulsars_ra.txt, knownpulsars_dec.txt, and knownpulsars_dm.txt, resepctively.
+
+1. If the RA -and- Dec separations between the candidate and a pulsar is less than 0.3 degrees, the fractional difference between the candidate's period and pulsar period (or one of its harmonics, up to the 99th) is computed. Otherwise the candidate is given a 0 rating.
+
+2. If this value is less than 0.0002, the fractional difference between the candidate and known pulsar DM is calculated. The rating is then just the inverse of the smallest DM fractional difference.
+
+3. Otherwise, if the fractional difference between the candidate period and an integer-ratio-multiple of a known pulsar period [e.g. (3/16)*P_psr, (5/33)*P_psr] is less than 0.02, the fractional difference in DM is computed. The rating is the inverse of the smallest fractional difference.
+
+Known pulsars should have very high ratings (~>10) and most non-pulsars should be rated with a zero. """,
             with_files=False)
+
 
     def rate_candidate(self, hdr, candidate, file=None):
         p = candidate["bary_period"]	# get candidate P_bary
@@ -44,20 +53,30 @@ class KnownPulsarRating(rating.DatabaseRater):
 
 	periods = fPeriods[(diff_ra < 0.3) & (diff_dec < 0.3)]
 	dms = fDM[(diff_ra < 0.3) & (diff_dec < 0.3)]
-#	print periods,dms
+
+
+
 
 	for b in range(1,m):
 	    pdiff = (2.0*np.abs(p*b-periods)/(p*b+periods))
-#	    print pdiff
+
 	    if np.any((pdiff < 0.0002)):
-		        pdiff_min=1./min(2.0*np.abs(((dms)-dm)/((dms)+dm)))
-			print pdiff_min,dms			
+		for dispm in dms:
+		    	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
+			pdiff_min=max(pdiff_dm,pdiff_min)
+
+				
+				
 	if pdiff_min == 0.0:
 	    for rat in ratios:
 		pdiff = 2.0*np.abs(((p*rat)-periods)/((p*rat)+periods))
 		if np.any((pdiff < 0.02)):
+			for dispm in dms:
+		        	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
 
-		        pdiff_min=1./min(2.0*np.abs(((dms)-dm)/((dms)+dm)))
+				pdiff_min=max(pdiff_dm,pdiff_min)
+
+
 	return pdiff_min
 
 if __name__=='__main__':
