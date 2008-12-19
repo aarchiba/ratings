@@ -2,12 +2,8 @@ import numpy as np
 #import math
 import rating
 
-version = 1
+version = 2
 n = 1833
-#psr_period=[]
-#psr_name=[]
-#psr_ra=[]
-#psr_decl=[]
 m=99
 
 numerator = np.arange(1,33,dtype=float)
@@ -27,23 +23,23 @@ class KnownPulsarRating(rating.DatabaseRater):
             name="Known Pulsar Rating",
             description="""Evaluate how close the barycentric period is to a known pulsar, its harmonics (up to 99th), or an integer-ratio-multiple of a known pulsar period.
 
-	Considers all pulsars from the ATNF catalog, as well as known PALFA and DMB pulsars. The known pulsar P, Ra, Dec, and DM are stored in knownpulsars_periods.txt, knownpulsars_ra.txt, knownpulsars_dec.txt, and knownpulsars_dm.txt, resepctively.
+	Considers all pulsars from the ATNF catalog, as well as known PALFA and DMB pulsars. The known pulsar P (in seconds), Ra and Dec (both in degrees), and DM are stored in knownpulsars_periods.txt, knownpulsars_ra.txt, knownpulsars_dec.txt, and knownpulsars_dm.txt, respectively.
 
-1. If the RA -and- Dec separations between the candidate and a pulsar is less than 0.3 degrees, the fractional difference between the candidate's period and pulsar period (or one of its harmonics, up to the 99th) is computed. Otherwise the candidate is given a 0 rating.
+1. If both the RA -and- Dec separations between the candidate and a pulsar are less than 0.3 degrees, the fractional difference between the candidate's period and pulsar period (or one of its harmonics, up to the 99th) is computed. Otherwise the candidate is given a 0 rating.
 
-2. If this value is less than 0.0002, the fractional difference between the candidate and known pulsar DM is calculated. The rating is then just the inverse of the smallest DM fractional difference.
+2. If this fractional period difference is less than 0.0002, the fractional difference between the candidate and known pulsar DM is calculated. The rating is then just the inverse of the smallest DM fractional difference.
 
 3. Otherwise, if the fractional difference between the candidate period and an integer-ratio-multiple of a known pulsar period [e.g. (3/16)*P_psr, (5/33)*P_psr] is less than 0.02, the fractional difference in DM is computed. The rating is the inverse of the smallest fractional difference.
 
-Known pulsars should have very high ratings (~>10) and most non-pulsars should be rated with a zero. """,
+Known pulsars should have very high ratings (~>10) and most (but not all) non-pulsars should be rated with a zero. """,
             with_files=False)
 
 
     def rate_candidate(self, hdr, candidate, file=None):
         p = candidate["bary_period"]	# get candidate P_bary
         dm = candidate["dm"]            # get candidate DM
-	ra = hdr["ra_deg"]		# R.A.
-   	decl = hdr["dec_deg"]		# Dec.
+	ra = hdr["ra_deg"]		# get candidate R.A.
+   	decl = hdr["dec_deg"]		# get candidate Dec.
         pdiff_min = 0.0      
 
 	diff_ra=np.abs(fRA-ra)
@@ -51,8 +47,8 @@ Known pulsars should have very high ratings (~>10) and most non-pulsars should b
 
 
 
-	periods = fPeriods[(diff_ra < 0.3) & (diff_dec < 0.3)]
-	dms = fDM[(diff_ra < 0.3) & (diff_dec < 0.3)]
+	periods = fPeriods[(diff_ra < 0.2) & (diff_dec < 0.2)]
+	dms = fDM[(diff_ra < 0.2) & (diff_dec < 0.2)]
 
 
 
@@ -63,7 +59,7 @@ Known pulsars should have very high ratings (~>10) and most non-pulsars should b
 	    if np.any((pdiff < 0.0002)):
 		for dispm in dms:
 		    	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
-			pdiff_min=max(pdiff_dm,pdiff_min)
+			pdiff_min=np.minimum(pdiff_dm,pdiff_min)
 
 				
 				
@@ -74,7 +70,7 @@ Known pulsars should have very high ratings (~>10) and most non-pulsars should b
 			for dispm in dms:
 		        	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
 
-				pdiff_min=max(pdiff_dm,pdiff_min)
+				pdiff_min=np.minimum(pdiff_dm,pdiff_min)
 
 
 	return pdiff_min
