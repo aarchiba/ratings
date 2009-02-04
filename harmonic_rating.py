@@ -2,10 +2,12 @@ import numpy as np
 
 import rating
 
-version = 3
-n = 132
+version = 4
+
 
 fRfi = np.array([float(r) for r in open('rfi_frequencies.txt') if r.strip()])
+
+n=len(fRfi)
 
 class HarmonicRating(rating.DatabaseRater):
     def __init__(self,DBconn):
