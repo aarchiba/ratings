@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import MySQLdb
 import config as c
