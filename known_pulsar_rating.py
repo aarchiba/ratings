@@ -2,7 +2,7 @@ import numpy as np
 #import math
 import rating
 
-version = 2
+version = 3
 n = 1833
 m=99
 
@@ -27,7 +27,7 @@ class KnownPulsarRating(rating.DatabaseRater):
 
 1. If both the RA -and- Dec separations between the candidate and a pulsar are less than 0.3 degrees, the fractional difference between the candidate's period and pulsar period (or one of its harmonics, up to the 99th) is computed. Otherwise the candidate is given a 0 rating.
 
-2. If this fractional period difference is less than 0.0002, the fractional difference between the candidate and known pulsar DM is calculated. The rating is then just the inverse of the smallest DM fractional difference.
+2. If this fractional period difference is less than 0.001, the fractional difference between the candidate and known pulsar DM is calculated. The rating is then just the inverse of the smallest DM fractional difference.
 
 3. Otherwise, if the fractional difference between the candidate period and an integer-ratio-multiple of a known pulsar period [e.g. (3/16)*P_psr, (5/33)*P_psr] is less than 0.02, the fractional difference in DM is computed. The rating is the inverse of the smallest fractional difference.
 
@@ -56,10 +56,10 @@ Known pulsars should have very high ratings (~>10) and most (but not all) non-pu
 	for b in range(1,m):
 	    pdiff = (2.0*np.abs(p*b-periods)/(p*b+periods))
 
-	    if np.any((pdiff < 0.0002)):
+	    if np.any((pdiff < 0.002)):
 		for dispm in dms:
 		    	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
-			pdiff_min=np.minimum(pdiff_dm,pdiff_min)
+			pdiff_min=np.min(pdiff_dm,pdiff_min)
 
 				
 				
@@ -70,7 +70,7 @@ Known pulsars should have very high ratings (~>10) and most (but not all) non-pu
 			for dispm in dms:
 		        	pdiff_dm=1./(2.0*np.abs(((dispm)-dm)/((dispm)+dm)))
 
-				pdiff_min=np.minimum(pdiff_dm,pdiff_min)
+				pdiff_min=np.min(pdiff_dm,pdiff_min)
 
 
 	return pdiff_min
