@@ -5,10 +5,6 @@ import rating
 version = 4
 
 
-fRfi = np.array([float(r) for r in open('rfi_frequencies.txt') if r.strip()])
-
-n=len(fRfi)
-
 class HarmonicRating(rating.DatabaseRater):
     def __init__(self,DBconn):
         rating.DatabaseRater.__init__(self,DBconn,version=version,
@@ -20,27 +16,13 @@ Considers spin frequencies that exhibit a high incidence of RFI (stored in rfi_f
 Should really be called something like --RFI Rating-- instead of --Harmonic Rating--. 
 """,
             with_files=False)
-
+	self.fRfi = np.loadtxt("rfi_frequencies.txt", usecols=(0,))
 
 
     def rate_candidate(self, hdr, candidate, file=None):
-        f = candidate["frequency"]
-
-
-
-
-
-        fdiff_min = 1e10
-
-        for a in range(1,n):
-                fdiff = 2*abs(f-float(fRfi[a]))/(f+float(fRfi[a]))
-                fdiff_min = np.minimum(fdiff,fdiff_min)
-
-
-	
-        return fdiff_min
-
-
+	f = candidate["frequency"]
+        fdiffs = 2*np.abs(f-self.fRfi)/(f+self.fRfi)
+        return fdiffs.min()
 
 
 if __name__=='__main__':
