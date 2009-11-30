@@ -14,15 +14,14 @@ def main():
 	where_clause = None
 
     times = []
-
-# Oct. 28, 2008 - Gaussian fitting is currently broken. Don't apply those ratings.
-#    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
-
-    for R in [profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
+    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
 	r = R(rating.usual_database())
 	t1 = datetime.datetime.now()
 	print "%s: Working on %s" % (t1.strftime("%c"), r.name)
-	r.run(where_clause)
+	try:
+	    r.run(where_clause)
+	except KeyboardInterrupt:
+	    pass
 	t2 = datetime.datetime.now()
 	times.append((r.name, t2-t1))
     print_summary(times)

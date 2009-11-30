@@ -54,11 +54,13 @@ class DatabaseWalker:
                                     self.act_on_candidate(hdr,candidate,f)
                                 except Exception, e:
                                     print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+				    raise
                         else:
                             try:
                                 self.act_on_candidate(hdr,candidate)
                             except Exception, e:
                                 print "Exception raised while rating candidate %s: %s" % (candidate, e)
+				raise
             finally:
                 shutil.rmtree(d)
 
@@ -219,7 +221,48 @@ class DatabaseRater(DatabaseWalker):
 
     def run(self,where_clause=None):
         self.setup_tables() # Make sure the rating table exists
-        DatabaseWalker.run(self,where_clause=where_clause)
+        
+	if where_clause is None:
+	    # Get only headers that have unrated candidates (this is why we use "WHERE ratings.value IS NULL")
+	    self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN ratings ON pdm_candidates.pdm_cand_id=ratings.pdm_cand_id AND ratings.rating_id=%d LEFT JOIN headers ON headers.header_id=pdm_candidates.header_id WHERE ratings.value IS NULL GROUP BY pdm_candidates.header_id" % self.rating_id)
+        else:
+	    try:
+		# Get only headers that have unrated candidates (this is why we use "WHERE ratings.value IS NULL")
+		self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN ratings ON pdm_candidates.pdm_cand_id=ratings.pdm_cand_id AND ratings.rating_id=%d LEFT JOIN headers ON headers.header_id=pdm_candidates.header_id WHERE ratings.value IS NULL AND (%s) GROUP BY pdm_candidates.header_id" % (self.rating_id, where_claus))
+	    except MySQLdb.OperationalError:
+		print "Error in MySQL query!"
+		print "Prefix fields with table name abbreviation:" 
+		print "\t(table_name.field_name)."
+		sys.exit(1)
+		
+        for hdr in self.DBcursor.fetchall():
+            if where_clause is None:
+                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
+            else:
+                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s AND ("+where_clause+")",hdr["header_id"])
+            d = tempfile.mkdtemp()
+            try:
+                for candidate in self.DBcursor.fetchall():
+                    if self.pre_check_candidate(hdr,candidate):
+                        if self.with_files:
+                                try:
+                                    f = self.extract_file(d,candidate)
+                                except ValueError, e:
+                                    sys.stderr.write(str(e))
+                                    continue
+                                try:
+                                    self.act_on_candidate(hdr,candidate,f)
+                                except Exception, e:
+                                    print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+				    raise
+                        else:
+                            try:
+                                self.act_on_candidate(hdr,candidate)
+                            except Exception, e:
+                                print "Exception raised while rating candidate %s: %s" % (candidate, e)
+				raise
+            finally:
+                shutil.rmtree(d)
 
     def rate_by_cand_id(self,pdm_cand_id):
 
