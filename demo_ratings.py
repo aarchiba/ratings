@@ -2,7 +2,29 @@ import config as c
 import demo_report
 import sys
 
+
+
 if c.survey == "PALFA":
+    # PALFA broadbandedness cand_ids
+    pdm_cand_ids_broad = {
+        126381: "Broadbandedness 1", \
+        296191: "Broadbandedness 2", \
+        551193: "Broadbandedness 3", \
+        549061: "Broadbandedness 4", \
+        592007: "Broadbandedness 5", \
+        591295: "Broadbandedness 6", \
+        434756: "Known MSP (J1910+1256), bright, scintillating", \
+        314966: "Known pulsar (J1948+25)", \
+        38178: "Noisy signal 1", \
+        2151: "Noisy signal 2", \
+        2150: "Noisy signal 3", \
+        3264: "Noisy signal 4", \
+        2050: "Noisy signal 5", \
+        1944: "Noisy signal 6", \
+        1309: "Noisy signal 7", \
+        3307: "Noisy signal 8" \
+    }
+    
     # PALFA pdm_cand_ids
     pdm_cand_ids = {
     284989: "- Known pulsar, narrow peak (J1900+06)",
@@ -122,6 +144,14 @@ if c.survey == "PALFA":
     598694: "- RFI, at 250 Hz",
     297289: "- RFI, strong 1",
     592453: "- RFI, strong 2",
+	38178: "Noisy signal 1",
+	2151: "Noisy signal 2",
+	2150: "Noisy signal 3",
+	3264: "Noisy signal 4",
+	2050: "Noisy signal 5",
+	1944: "Noisy signal 6",
+	1309: "Noisy signal 7",
+	3307: "Noisy signal 8"
     }
 elif c.survey == "DRIFT":
     # GBT DRIFT pdm_cand_ids
@@ -139,6 +169,7 @@ else:
     pdm_cand_ids = {}
     raise ValueError("Unknown survey '%s', no demo candidates available" % c.survey)
 
+
 def demo_rating(rating):
     for (n,i) in sorted([(n,i) for (i,n) in pdm_cand_ids.items()]):
         r = rating.rate_by_cand_id(i)
@@ -150,25 +181,20 @@ def demo_rating(rating):
 
 if __name__=='__main__':
     import rating
-    import profile_ratings
-    import harmonic_rating
-    import pfd_ratings
-    import known_pulsar_rating
+    import subband_ratings
     import rfi_rating
 
     global cand_ratings
     cand_ratings = {}
     rating_objects = []
-
-
 #    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating,known_pulsar_rating.KnownPulsarRating, rfi_rating.RFIRating]:
 #    for R in [known_pulsar_rating.KnownPulsarRating]:
 #    for R in [harmonic_rating.HarmonicRating]:
 #    for R in [profile_ratings.GaussianHeight]:
 #    for R in [profile_ratings.GaussianWidth]:
 #    for R in [pfd_ratings.RatioRating]:
+#    for R in [subband_ratings.BroadbandednessRatingI]:
     for R in [rfi_rating.RFIRating]:
-
         r = R(rating.usual_database())
 	rating_objects.append(r)
 	print r.name
