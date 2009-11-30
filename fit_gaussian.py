@@ -95,7 +95,7 @@ def k_for_fwhm_approx(fwhm):
 
 def fit_gaussian(profile):
     ks = [k_for_fwhm_approx(fwhm/float(len(profile))) for fwhm in range(1,len(profile)//2)]
-    pos = np.argmin([rms_residual(k,profile) for k in ks])
+    pos = int(np.argmin([rms_residual(k,profile) for k in ks]))
 
     if pos==0:
         mid = ks[0]
