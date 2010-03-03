@@ -17,6 +17,7 @@ def main():
     rating.run(D,
                [gaussian_ratings.GaussianWidth(D), 
                 gaussian_ratings.GaussianHeight(D), 
+                gaussian_ratings.GaussianPhase(D), 
                 profile_ratings.PeakOverRMS(D),
                 harmonic_rating.HarmonicRating(D), 
                 profile_ratings.DutyCycle(D), 
