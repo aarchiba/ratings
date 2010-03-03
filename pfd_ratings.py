@@ -4,6 +4,8 @@ import rating
 import prepfold_plus
 import scipy.stats as stats
 
+import copy
+
 class PrepfoldSigmaRating(rating.DatabaseRater):
     def __init__(self, DBconn):
 	rating.DatabaseRater.__init__(self, DBconn, \
@@ -35,7 +37,7 @@ class PrepfoldSigmaRating(rating.DatabaseRater):
 
 class RatioRating(rating.DatabaseRater):
     def __init__(self,DBconn):
-        rating.DatabaseRater.__init__(self,DBconn,version=2,
+        rating.DatabaseRater.__init__(self,DBconn,version=3,
             name="Ratio Rating",
             description="""Compare DM 0 and "best" DM
 
@@ -46,9 +48,18 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
 
     def rate_candidate(self, hdr, candidate, pfd, cache=None):
         
-        pfd.dedisperse(0)
         p0 = np.sum(np.sum(pfd.profs,axis=0),axis=0)
-        pfd.dedisperse(candidate["dm"])
+        if "dedispersed_pfd" in cache:
+            pfd = cache["dedispersed_pfd"]
+        else:
+            oldpfd = pfd
+            pfd = copy.deepcopy(pfd)
+            pfd.dedisperse(candidate["dm"])
+            pfd_file.profs[0,0,0]+=1
+            if np.all(oldpfd.profs == pfd.profs):
+                raise ValueError("copy failed to copy the pfd file")
+            pfd_file.profs[0,0,0]-=1
+            cache["dedispersed_pfd"] = pfd
         p1 = np.sum(np.sum(pfd.profs,axis=0),axis=0)
 
         return (np.amax(p0)-np.mean(p0))/(np.amax(p1)-np.mean(p1))

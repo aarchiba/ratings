@@ -209,13 +209,14 @@ class DatabaseRater(DatabaseWalker):
 
     def act_on_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         r = self.rate_candidate(hdr,candidate,pfd_file,cache)
-        print "Candidate %d rated %f" % (candidate["pdm_cand_id"],r)
+        print "%25s: Candidate %d rated %f" % (self.__class__.__name__,candidate["pdm_cand_id"],r)
         self.DBcursor.execute("INSERT INTO ratings (rating_id,pdm_cand_id,value) VALUES (%s,%s,%s)",(self.rating_id,candidate["pdm_cand_id"],r))
 
     def pre_check_candidate(self,hdr,candidate):
-        if get_one(self.DBcursor,"SELECT * FROM ratings WHERE rating_id=%s AND pdm_cand_id=%s", (self.rating_id, candidate["pdm_cand_id"])):
+        r =get_one(self.DBcursor,"SELECT * FROM ratings WHERE rating_id=%s AND pdm_cand_id=%s", (self.rating_id, candidate["pdm_cand_id"]))
+        if r:
             # Already used this version on this candidate
-            print "Candidate %d already rated" % candidate["pdm_cand_id"]
+            print "%25s: Candidate %d already rated %f" % (self.__class__.__name__,candidate["pdm_cand_id"],r['value'])
             return False
         else:
             return True
