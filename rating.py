@@ -19,48 +19,7 @@ def get_all(cursor,cmd,arg=None):
     cursor.execute(cmd,arg)
     return cursor.fetchall()
 
-class DatabaseWalker:
-    def __init__(self, DBconn, with_files=False, with_bestprof=False):
-        self.DBconn = DBconn
-        self.DBcursor = MySQLdb.cursors.DictCursor(self.DBconn)
-        self.with_files = with_files
-        self.with_bestprof = with_bestprof
-
-    def run(self,where_clause=None):
-        self.DBcursor.execute("SELECT * FROM headers")
-        for hdr in self.DBcursor.fetchall()[::-1]:
-            if where_clause is None:
-                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
-            else:
-                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s AND ("+where_clause+")",hdr["header_id"])
-            d = tempfile.mkdtemp()
-            try:
-                for candidate in self.DBcursor.fetchall():
-                    cache = {}
-                    if self.pre_check_candidate(hdr,candidate):
-                        if self.with_files:
-                                try:
-                                    f = self.extract_file(d,candidate)
-                                except Exception, e:
-                                    sys.stderr.write(str(e))
-                                    continue
-                                try:
-                                    self.act_on_candidate(hdr,candidate,f,cache=cache)
-                                except Exception, e:
-                                    print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
-                        else:
-                            try:
-                                self.act_on_candidate(hdr,candidate,cache=cache)
-                            except Exception, e:
-                                print "Exception raised while rating candidate %s: %s" % (candidate, e)
-            finally:
-                shutil.rmtree(d)
-
-    def extract_file(self,dir,candidate):
-        f = get_one(self.DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
-        if f is None:
-            raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-
+def extract_file(dir,candidate,f,with_bestprof):
         filename = f["filename"]
         pfd_filename = filename.split(".ps.gz")[0]
 
@@ -87,20 +46,58 @@ class DatabaseWalker:
 
         return prepfold.pfd(rfn)
 
-    def run_by_cand_id(self,pdm_cand_id):
 
-        candidate = candidate_by_id(self.DBconn,pdm_cand_id)
-        hdr = header_for_candidate(self.DBconn,candidate)
+def run(DBconn, ratings, where_clause=None):
+    DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
+    DBcursor.execute("SELECT * FROM headers")
+    for hdr in DBcursor.fetchall()[::-1]:
+        if where_clause is None:
+            DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
+        else:
+            DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s AND ("+where_clause+")",hdr["header_id"])
         d = tempfile.mkdtemp()
         try:
-            if self.with_files:
-                    f = self.extract_file(d,candidate)
-                    self.act_on_candidate(hdr,candidate,f)
-            else:
-                self.act_on_candidate(hdr,candidate)
+            for candidate in DBcursor.fetchall():
+                cache = {}
+                rs = [r in ratings if r.pre_check_candidate(hdr,candidate)]
+                with_files = False
+                with_bestprof = False
+
+                for r in rs:
+                    if r.with_files:
+                        with_files=True
+                    if r.with_bestprof:
+                        with_bestprof=True
+
+                if with_files:
+                    ff = get_one(self.DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
+                    if ff is None:
+                        raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
+                    try:
+                        f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                    except Exception, e:
+                        sys.stderr.write(str(e))
+                else:
+                    f = None
+
+                for r in rs:
+                    try:
+                        r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    except Exception, e:
+                        print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
         finally:
             shutil.rmtree(d)
+
+class DatabaseWalker:
+    def __init__(self, DBconn, with_files=False, with_bestprof=False):
+        self.DBconn = DBconn
+        self.DBcursor = MySQLdb.cursors.DictCursor(self.DBconn)
+        self.with_files = with_files
+        self.with_bestprof = with_bestprof
+
+    def run(self,where_clause=None):
+        run(self.DBconn, [self], where_clause)
 
     def pre_check_candidate(self, hdr, candidate):
         """Called to check whether it's worth extracting the file for a candidate"""
@@ -203,26 +200,10 @@ class DatabaseRater(DatabaseWalker):
         raise NotImplementedError
 
     def run(self,where_clause=None):
+        # FIXME: make sure this gets run in the new design
         self.setup_tables() # Make sure the rating table exists
         DatabaseWalker.run(self,where_clause=where_clause)
 
-    def rate_by_cand_id(self,pdm_cand_id):
-
-        candidate = candidate_by_id(self.DBconn,pdm_cand_id)
-        if candidate is None:
-            raise ValueError("Candidate %s not found!" % pdm_cand_id)
-        hdr = header_for_candidate(self.DBconn,candidate)
-
-        d = tempfile.mkdtemp()
-        try:
-            if self.with_files:
-                    f = self.extract_file(d,candidate)
-                    return self.rate_candidate(hdr,candidate,f)
-            else:
-                return self.rate_candidate(hdr,candidate)
-        finally:
-            shutil.rmtree(d)
-            
     def act_on_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         r = self.rate_candidate(hdr,candidate,pfd_file)
         print "Candidate %d rated %f" % (candidate["pdm_cand_id"],r)

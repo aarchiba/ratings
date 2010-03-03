@@ -13,18 +13,16 @@ def main():
     else:
 	where_clause = None
 
-    times = []
-    for R in [profile_ratings.GaussianWidth, profile_ratings.GaussianHeight, profile_ratings.PeakOverRMS,harmonic_rating.HarmonicRating, profile_ratings.DutyCycle, pfd_ratings.RatioRating, known_pulsar_rating.KnownPulsarRating]:
-	r = R(rating.usual_database())
-	t1 = datetime.datetime.now()
-	print "%s: Working on %s" % (t1.strftime("%c"), r.name)
-	try:
-	    r.run(where_clause)
-	except KeyboardInterrupt:
-	    pass
-	t2 = datetime.datetime.now()
-	times.append((r.name, t2-t1))
-    print_summary(times)
+    D = rating.usual_database()
+    rating.run(D,
+               [gaussian_ratings.GaussianWidth(D), 
+                gaussian_ratings.GaussianHeight(D), 
+                profile_ratings.PeakOverRMS(D),
+                harmonic_rating.HarmonicRating(D), 
+                profile_ratings.DutyCycle(D), 
+                pfd_ratings.RatioRating(D), 
+               ],
+              where_clause=where_clause)
 
 def print_summary(times):
     print "-"*55

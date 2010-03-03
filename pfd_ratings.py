@@ -33,32 +33,6 @@ class PrepfoldSigmaRating(rating.DatabaseRater):
 	    
 	return pfdsig
 
-class PeaksearchRating(rating.DatabaseRater):
-    def __init__(self,DBconn):
-        rating.DatabaseRater.__init__(self,DBconn,version=2,
-            name="Peaksearch Rating",
-            description="""Compare peak amplitude to RMS amplitude
-
-
-""",
-            with_files=True)
-
-    def rate_candidate(self, hdr, candidate, pfd, cache=None):
-        
-        pfd.dedisperse(candidate["dm"])
-        stds = np.std(pfd.profs,axis=-1)
-        s = np.average(stds)/np.sqrt(stds.size)
-
-        p1 = np.average(np.average(pfd.profs,axis=0),axis=0)
-
-        pk = (np.amax(p1)-np.average(p1))/s
-
-        r = -stats.norm.ppf(len(p1)*stats.norm.sf(pk))
-        if not np.isfinite(r):
-             if r>0: r=99
-             else: r=-99
-        return r
-
 class RatioRating(rating.DatabaseRater):
     def __init__(self,DBconn):
         rating.DatabaseRater.__init__(self,DBconn,version=2,
@@ -72,6 +46,7 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
 
     def rate_candidate(self, hdr, candidate, pfd, cache=None):
         
+        pfd.dedisperse(0)
         p0 = np.sum(np.sum(pfd.profs,axis=0),axis=0)
         pfd.dedisperse(candidate["dm"])
         p1 = np.sum(np.sum(pfd.profs,axis=0),axis=0)
@@ -80,6 +55,9 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
 
 
 if __name__=='__main__':
-    RatioRating(rating.usual_database()).run()
-    PrepfoldSigmaRating(rating.usual_database()).run()
-    PeaksearchRating(rating.usual_database()).run()
+    D = rating.usual_database()
+    rating.run(D, 
+               [RatioRating(D),
+                PrepfoldSigmaRating(D),
+                PeaksearchRating(D),
+               ])

@@ -31,4 +31,5 @@ result lies between zero and one, reaching 1/2 at a tenth of a percent.
 
 
 if __name__=='__main__':
-    HarmonicRating(rating.usual_database()).run()
+    D = rating.usual_database()
+    rating.run(D, [HarmonicRating(D)])

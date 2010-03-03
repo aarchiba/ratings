@@ -5,18 +5,23 @@ from numpy.fft import rfft
 import scipy.optimize
 
 
-import fit_gaussian
-
-
 class ProfileRating(rating.DatabaseRater):
     def __init__(self, DBconn, name, version, description):
         rating.DatabaseRater.__init__(self,DBconn,name,version,description,with_files=True)
 
     def rate_candidate(self,hdr,candidate,pfd_file=None,cache=None):
-        std = np.std(pfd_file.profs)*np.sqrt(pfd_file.nsub*pfd_file.npart)
-        pfd_file.dedisperse(pfd_file.bestdm)
-        prof = pfd_file.combine_profs(1,1)[0,0]
-        prof -= np.mean(prof)
+        if "std" in cache:
+            std = cache["std"]
+        else:
+            std = np.std(pfd_file.profs)*np.sqrt(pfd_file.nsub*pfd_file.npart)
+            cache["std"] = std
+        if "profile" in cache:
+            prof = cache["profile"]
+        else:
+            pfd_file.dedisperse(pfd_file.bestdm)
+            prof = pfd_file.combine_profs(1,1)[0,0]
+            prof -= np.mean(prof)
+            cache["profile"] = prof
         return self.rate_profile(hdr,candidate,prof,std)
 
     def rate_profile(self,hdr,candidate,profile,std):
@@ -47,39 +52,10 @@ Specifically, compute (max(profile)-mean(profile))/std(profile).
     def rate_profile(self,hdr,candidate,profile,std):
         return (np.amax(profile)-np.mean(profile))/np.std(profile)
 
-class GaussianHeight(ProfileRating):
-    def __init__(self, DBconn):
-        ProfileRating.__init__(self, DBconn,
-            "Gaussian Height",
-            3,
-            """Compute the height of the best-fit Gaussian over the RMS amplitude.
-
-            The function being fit is not actually a Gaussian, it's a von Mises
-            distribution (exp(k*cos(theta)))
-""")
-
-    def rate_profile(self,hdr,candidate,profile,std):
-        G = fit_gaussian.fit_gaussian(profile)
-        return G.amplitude(len(profile))/np.std(profile-G.histogram(len(profile)))
-
-class GaussianWidth(ProfileRating):
-    def __init__(self, DBconn):
-        ProfileRating.__init__(self, DBconn,
-            "Gaussian Width",
-            2,
-            """Compute the full width at half maxiumum of the best-fit Gaussian.
-
-            The function being fit is not actually a Gaussian, it's a von Mises
-            distribution (exp(k*cos(theta)))
-""")
-
-    def rate_profile(self,hdr,candidate,profile,std):
-        G = fit_gaussian.fit_gaussian(profile)
-        return G.fwhm()
-
-
 if __name__=='__main__':
-    GaussianHeight(rating.usual_database()).run()
-    DutyCycle(rating.usual_database()).run()
-    PeakOverRMS(rating.usual_database()).run()
+    D = rating.usual_database()
+    rating.run(D,
+               [DutyCycle(D), 
+                PeakOverRMS(D),
+               ])
 
