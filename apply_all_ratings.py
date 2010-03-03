@@ -5,7 +5,7 @@ def main():
     import harmonic_rating
     import pfd_ratings
     import profile_ratings
-    import known_pulsar_rating
+    import gaussian_ratings
 
     if len(sys.argv) > 1:
         where_clause = ' '.join(sys.argv[1:])

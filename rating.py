@@ -33,7 +33,7 @@ def extract_file(dir,candidate,f,with_bestprof):
                 tar.extract_all(dir)
             else:
                 subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
-        if self.with_bestprof:
+        if with_bestprof:
             if not os.path.exists(rfn+".bestprof"):
                 # Create bestprof file using 'show_pfd'
                 dir, pfdfn = os.path.split(rfn)
@@ -48,6 +48,8 @@ def extract_file(dir,candidate,f,with_bestprof):
 
 
 def run(DBconn, ratings, where_clause=None):
+    for r in ratings:
+        r.setup_tables()
     DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
     DBcursor.execute("SELECT * FROM headers")
@@ -60,7 +62,7 @@ def run(DBconn, ratings, where_clause=None):
         try:
             for candidate in DBcursor.fetchall():
                 cache = {}
-                rs = [r in ratings if r.pre_check_candidate(hdr,candidate)]
+                rs = [r for r in ratings if r.pre_check_candidate(hdr,candidate)]
                 with_files = False
                 with_bestprof = False
 
@@ -71,21 +73,23 @@ def run(DBconn, ratings, where_clause=None):
                         with_bestprof=True
 
                 if with_files:
-                    ff = get_one(self.DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
+                    ff = get_one(DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
                     if ff is None:
                         raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-                    try:
-                        f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
-                    except Exception, e:
-                        sys.stderr.write(str(e))
+                    f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                    #try:
+                    #    f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                    #except Exception, e:
+                    #   sys.stderr.write(str(e))
                 else:
                     f = None
 
                 for r in rs:
-                    try:
-                        r.act_on_candidate(hdr,candidate,f,cache=cache)
-                    except Exception, e:
-                        print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+                    r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    #try:
+                    #    r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    #except Exception, e:
+                    #    print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
         finally:
             shutil.rmtree(d)
 
@@ -195,17 +199,16 @@ class DatabaseRater(DatabaseWalker):
         else:
             self.DBcursor.execute("INSERT INTO rating_type_current_versions SET rating_id=%s, current_version=%s, name=%s", (self.rating_id, self.version, self.name))
 
-    def rate_candidate(self,hdr,candidate,pfd_file=None):
+    def rate_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         """Override to return the rating for a candidate"""
         raise NotImplementedError
 
     def run(self,where_clause=None):
-        # FIXME: make sure this gets run in the new design
         self.setup_tables() # Make sure the rating table exists
         DatabaseWalker.run(self,where_clause=where_clause)
 
     def act_on_candidate(self,hdr,candidate,pfd_file=None,cache=None):
-        r = self.rate_candidate(hdr,candidate,pfd_file)
+        r = self.rate_candidate(hdr,candidate,pfd_file,cache)
         print "Candidate %d rated %f" % (candidate["pdm_cand_id"],r)
         self.DBcursor.execute("INSERT INTO ratings (rating_id,pdm_cand_id,value) VALUES (%s,%s,%s)",(self.rating_id,candidate["pdm_cand_id"],r))
 

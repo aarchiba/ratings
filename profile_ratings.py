@@ -22,9 +22,9 @@ class ProfileRating(rating.DatabaseRater):
             prof = pfd_file.combine_profs(1,1)[0,0]
             prof -= np.mean(prof)
             cache["profile"] = prof
-        return self.rate_profile(hdr,candidate,prof,std)
+        return self.rate_profile(hdr,candidate,prof,std,cache)
 
-    def rate_profile(self,hdr,candidate,profile,std):
+    def rate_profile(self,hdr,candidate,profile,std,cache):
         raise NotImplementedError
 
 
