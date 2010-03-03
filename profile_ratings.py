@@ -12,7 +12,7 @@ class ProfileRating(rating.DatabaseRater):
     def __init__(self, DBconn, name, version, description):
         rating.DatabaseRater.__init__(self,DBconn,name,version,description,with_files=True)
 
-    def rate_candidate(self,hdr,candidate,pfd_file=None):
+    def rate_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         std = np.std(pfd_file.profs)*np.sqrt(pfd_file.nsub*pfd_file.npart)
         pfd_file.dedisperse(pfd_file.bestdm)
         prof = pfd_file.combine_profs(1,1)[0,0]

@@ -19,7 +19,7 @@ result lies between zero and one, reaching 1/2 at a tenth of a percent.
 """,
             with_files=False)
 
-    def rate_candidate(self, hdr, candidate, file=None):
+    def rate_candidate(self, hdr, candidate, file=None, cache=None):
         f = candidate["frequency"]
         fdiff_min = 1e10
         for a in range(1,9):

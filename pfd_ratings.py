@@ -16,7 +16,7 @@ class PrepfoldSigmaRating(rating.DatabaseRater):
 	    with_files = True, \
 	    with_bestprof = True)
 
-    def rate_candidate(self, hdr, candidate, pfd):
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
 	redchi2 = pfd.bestprof.chi_sqr #pfd.calc_redchi2()
 	df = pfd.proflen-1 # Degrees of freedom
 	
@@ -43,7 +43,7 @@ class PeaksearchRating(rating.DatabaseRater):
 """,
             with_files=True)
 
-    def rate_candidate(self, hdr, candidate, pfd):
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
         
         pfd.dedisperse(candidate["dm"])
         stds = np.std(pfd.profs,axis=-1)
@@ -66,7 +66,7 @@ class WidenessRating(rating.DatabaseRater):
             description="""Compare SNR to SNR with the two strongest channels removed""",
             with_files=True)
 
-    def rate_candidate(self, hdr, candidate, pfd):
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
         
         raise ValueError("Not implemented yet")
         pfd.dedisperse(candidate["dm"])
@@ -96,7 +96,7 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
 """,
             with_files=True)
 
-    def rate_candidate(self, hdr, candidate, pfd):
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
         
         p0 = np.sum(np.sum(pfd.profs,axis=0),axis=0)
         pfd.dedisperse(candidate["dm"])
@@ -117,7 +117,7 @@ Doesn't work.
 """,
             with_files=True)
 
-    def rate_candidate(self, hdr, candidate, pfd):
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
         pfd.dedisperse(candidate["dm"],interp=True)
 
         subbands = pfd.combine_profs(1,pfd.nsub)[0]

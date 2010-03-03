@@ -36,6 +36,7 @@ class DatabaseWalker:
             d = tempfile.mkdtemp()
             try:
                 for candidate in self.DBcursor.fetchall():
+                    cache = {}
                     if self.pre_check_candidate(hdr,candidate):
                         if self.with_files:
                                 try:
@@ -44,12 +45,12 @@ class DatabaseWalker:
                                     sys.stderr.write(str(e))
                                     continue
                                 try:
-                                    self.act_on_candidate(hdr,candidate,f)
+                                    self.act_on_candidate(hdr,candidate,f,cache=cache)
                                 except Exception, e:
                                     print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
                         else:
                             try:
-                                self.act_on_candidate(hdr,candidate)
+                                self.act_on_candidate(hdr,candidate,cache=cache)
                             except Exception, e:
                                 print "Exception raised while rating candidate %s: %s" % (candidate, e)
             finally:
@@ -105,7 +106,7 @@ class DatabaseWalker:
         """Called to check whether it's worth extracting the file for a candidate"""
         return True
 
-    def act_on_candidate(self,hdr,candidate,pfd=None):
+    def act_on_candidate(self,hdr,candidate,pfd=None,cache=None):
         """Override to implement a particular database walker.
 
         pfd is a prepfold.pfd object, representing a .pfd file.
@@ -131,7 +132,7 @@ class DatabaseLister(DatabaseWalker):
     def __init__(self, DBconn):
         DatabaseWalker.__init__(self,DBconn,with_files=True)
 
-    def act_on_candidate(self,hdr,candidate,pfd_file=None):
+    def act_on_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         print hdr, candidate, pfd_file
 
 # Table rating_type_current_versions
@@ -222,7 +223,7 @@ class DatabaseRater(DatabaseWalker):
         finally:
             shutil.rmtree(d)
             
-    def act_on_candidate(self,hdr,candidate,pfd_file=None):
+    def act_on_candidate(self,hdr,candidate,pfd_file=None,cache=None):
         r = self.rate_candidate(hdr,candidate,pfd_file)
         print "Candidate %d rated %f" % (candidate["pdm_cand_id"],r)
         self.DBcursor.execute("INSERT INTO ratings (rating_id,pdm_cand_id,value) VALUES (%s,%s,%s)",(self.rating_id,candidate["pdm_cand_id"],r))
@@ -258,93 +259,6 @@ def manual_classification(DBconn,candidate):
     else:
         return r["rank"]
     
-
-class Candidate:
-    def __init__(self, header_db, candidate_db, pfd_dir):
-        self.header_db = header_db
-        self.candidate_db = candidate_db
-        self.pfd_dir = pfd_dir
-
-        self._pfd = None
-        self._pfd_filename = None
-        self._dedispersed_pfd = None
-        self._bestprof = False
-        self._best_profile = None
-        self._profile_bin_var = None
-
-    def _extract_file(self):
-        dir = self.pfd_dir
-        f = get_one(self.DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
-        if f is None:
-            raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-
-        filename = f["filename"]
-        pfd_filename = filename.split(".ps.gz")[0]
-
-        path = f["path"]
-        base, junk = filename.split('_DM')
-        rfn = os.path.join(dir,pfd_filename)
-        if not os.path.exists(rfn):
-            subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
-
-        self._pfd_filename = rfn
-
-    def _generate_bestprof(self):
-        if not os.path.exists(rfn+".bestprof"):
-            # Create bestprof file using 'show_pfd'
-            dir, pfdfn = os.path.split(rfn)
-            retcode = subprocess.call(["show_pfd",rfn,"-noxwin"],stdout=subprocess.PIPE)
-            #retcode = subprocess.call(["show_pfd",rfn,"-noxwin"])
-            if retcode:
-                raise ValueError("show_pfd failed with return code %d; pfd file is %s, directory contents are %s\n" % (retcode,rfn,sorted(os.listdir(dir))))
-            shutil.move(pfdfn+".bestprof", dir)
-            shutil.move(pfdfn+".ps", dir)
-
-    def pfd(self, bestprof=False):
-        change = False
-        if self._pfd is None:
-            self._extract_pfd()
-            change = True
-        if not self._bestprof:
-            self._generate_bestprof()
-            self._bestprof = True
-            change = True
-        if change:
-            self._pfd = prepfold.pfd(self._pfd_filename)
-        return self._pfd
-
-    def dedispersed_pfd(self, bestprof=False):
-        change = False
-        if self._pfd is None:
-            self.pfd(bestprof)
-            change = True
-        elif bestprof and not self._bestprof:
-            self._generate_bestprof()
-            self._bestprof = True
-            self._pfd = prepfold.pfd(self._pfd_filename)
-            change = True
-        if change:
-            self._dedispersed_pfd = prepfold.pfd(self._pfd_filename)
-            self._dedispersed_pfd.dedisperse(self.candidate_db["bestdm"])
-
-    def best_profile(self):
-        p = self.pfd(bestprof=True)
-        return p.bestprof
-
-    def profile_bin_var(self):
-        # Estimate this based on the data cube
-        p = self.pfd().profs
-        (n,m,r) = p.shape
-        return np.mean(np.var(p,axis=-1))/(n*m)
-
-    def subints_aligned(self,dm='best'):
-        if dm=='zero':
-            pass
-        elif dm=='best':
-            pass
-        else:
-            raise ValueError("Aligned subintegrations available only for dm 'zero' or 'best'")
-
 
 def usual_database():
     import DRIFT_config as c
