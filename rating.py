@@ -11,31 +11,24 @@ import numpy as np
 
 import prepfold
 
-import config as c
 
 def get_one(cursor,cmd,arg=None):
     cursor.execute(cmd,arg)
     return cursor.fetchone()
+def get_all(cursor,cmd,arg=None):
+    cursor.execute(cmd,arg)
+    return cursor.fetchall()
 
 class DatabaseWalker:
-    def __init__(self, DBconn, with_files=False):
+    def __init__(self, DBconn, with_files=False, with_bestprof=False):
         self.DBconn = DBconn
         self.DBcursor = MySQLdb.cursors.DictCursor(self.DBconn)
         self.with_files = with_files
+        self.with_bestprof = with_bestprof
 
     def run(self,where_clause=None):
-        if where_clause is None:
-	    self.DBcursor.execute("SELECT * FROM headers")
-        else:
-	    try:
-		self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN headers USING(header_id) WHERE %s GROUP BY header_id" % where_clause)
-	    except MySQLdb.OperationalError:
-		print "Error in MySQL query!"
-		print "Prefix fields with table name abbreviation:" 
-		print "\t(table_name.field_name)."
-		sys.exit(1)
-		
-        for hdr in self.DBcursor.fetchall():
+        self.DBcursor.execute("SELECT * FROM headers")
+        for hdr in self.DBcursor.fetchall()[::-1]:
             if where_clause is None:
                 self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
             else:
@@ -47,20 +40,18 @@ class DatabaseWalker:
                         if self.with_files:
                                 try:
                                     f = self.extract_file(d,candidate)
-                                except ValueError, e:
+                                except Exception, e:
                                     sys.stderr.write(str(e))
                                     continue
                                 try:
                                     self.act_on_candidate(hdr,candidate,f)
                                 except Exception, e:
                                     print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
-				    raise
                         else:
                             try:
                                 self.act_on_candidate(hdr,candidate)
                             except Exception, e:
                                 print "Exception raised while rating candidate %s: %s" % (candidate, e)
-				raise
             finally:
                 shutil.rmtree(d)
 
@@ -74,38 +65,26 @@ class DatabaseWalker:
 
         path = f["path"]
         base, junk = filename.split('_DM')
-        if c.survey=="PALFA":
-            beam = base.split("_")[-1][0] # PALFA beam number
-            rfn = os.path.join(dir,beam,pfd_filename) # PALFA pfd files are inside subdirectory in tarball
-        elif c.survey=="DRIFT":
-            rfn = os.path.join(dir,pfd_filename)
-        else:
-            raise ValueError("Unknown survey '%s'" % c.survey)
+        rfn = os.path.join(dir,pfd_filename)
         if not os.path.exists(rfn):
-            # FIXME: double-check none starts with /
-            
-	    # PALFA tarballs don't have _pfd in the filename
-	    tgz_path = os.path.join(path,base+".tgz")
-            tar_path = os.path.join(path,base+".tar")
-	    tar_gz_path = os.path.join(path,base+".tar.gz")
-            pfd_tgz_path = os.path.join(path,base+"_pfd.tgz")
-            pfd_tar_path = os.path.join(path,base+"_pfd.tar")
-	    pfd_tar_gz_path = os.path.join(path,base+"_pfd.tar.gz")
-	    if os.path.exists(tar_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-f",tar_path])
-            elif os.path.exists(tgz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",tgz_path])
-            elif os.path.exists(tar_gz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",tar_gz_path])
-	    elif os.path.exists(pfd_tar_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-f",pfd_tar_path])
-            elif os.path.exists(pfd_tgz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pfd_tgz_path])
-            elif os.path.exists(pfd_tar_gz_path):
-                subprocess.call(["tar","-C",dir,"--wildcards","-x","*.pfd","-z","-f",pfd_tar_gz_path])
+            if False:
+                # FIXME: double-check none starts with /
+                tar = tarfile.open(os.path.join(path,base+"_pfd.tgz"),"r")
+                tar.extract_all(dir)
             else:
-                raise ValueError("Cannot find tar file")
-	return prepfold.pfd(rfn)
+                subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
+        if self.with_bestprof:
+            if not os.path.exists(rfn+".bestprof"):
+                # Create bestprof file using 'show_pfd'
+                dir, pfdfn = os.path.split(rfn)
+                retcode = subprocess.call(["show_pfd",rfn,"-noxwin"],stdout=subprocess.PIPE)
+                #retcode = subprocess.call(["show_pfd",rfn,"-noxwin"])
+                if retcode:
+                    raise ValueError("show_pfd failed with return code %d; pfd file is %s, directory contents are %s\n" % (retcode,rfn,sorted(os.listdir(dir))))
+                shutil.move(pfdfn+".bestprof", dir)
+                shutil.move(pfdfn+".ps", dir)
+
+        return prepfold.pfd(rfn)
 
     def run_by_cand_id(self,pdm_cand_id):
 
@@ -175,11 +154,12 @@ class DatabaseLister(DatabaseWalker):
 #  value
 class DatabaseRater(DatabaseWalker):
 
-    def __init__(self, DBconn, name, version, description, with_files=True):
+    def __init__(self, DBconn, name, version, description, with_files=True, with_bestprof=False):
         self.name = name
         self.version = version
         self.description = description
-        DatabaseWalker.__init__(self,DBconn,with_files=with_files)
+        DatabaseWalker.__init__(self,DBconn,with_files=with_files,
+                                with_bestprof=with_bestprof)
         
     def setup_tables(self):
         self.DBcursor.execute("""CREATE TABLE IF NOT EXISTS 
@@ -201,8 +181,10 @@ class DatabaseRater(DatabaseWalker):
             """)
         r = get_one(self.DBcursor,"SELECT * FROM rating_types WHERE name=%s AND version=%s", (self.name, self.version))
         if not r:
+            print "Creating new rating type %s version %s" % (self.name, self.version)
             self.DBcursor.execute("INSERT INTO rating_types SET name=%s, description=%s, version=%s",(self.name,self.description,self.version))
             r = get_one(self.DBcursor,"SELECT * FROM rating_types WHERE name=%s AND version=%s", (self.name, self.version))
+            print get_all(self.DBcursor,"SELECT * FROM rating_types")
 
         self.rating_id = r["rating_id"]
 
@@ -221,48 +203,7 @@ class DatabaseRater(DatabaseWalker):
 
     def run(self,where_clause=None):
         self.setup_tables() # Make sure the rating table exists
-        
-	if where_clause is None:
-	    # Get only headers that have unrated candidates (this is why we use "WHERE ratings.value IS NULL")
-	    self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN ratings ON pdm_candidates.pdm_cand_id=ratings.pdm_cand_id AND ratings.rating_id=%d LEFT JOIN headers ON headers.header_id=pdm_candidates.header_id WHERE ratings.value IS NULL GROUP BY pdm_candidates.header_id" % self.rating_id)
-        else:
-	    try:
-		# Get only headers that have unrated candidates (this is why we use "WHERE ratings.value IS NULL")
-		self.DBcursor.execute("SELECT headers.* FROM pdm_candidates LEFT JOIN ratings ON pdm_candidates.pdm_cand_id=ratings.pdm_cand_id AND ratings.rating_id=%d LEFT JOIN headers ON headers.header_id=pdm_candidates.header_id WHERE ratings.value IS NULL AND (%s) GROUP BY pdm_candidates.header_id" % (self.rating_id, where_claus))
-	    except MySQLdb.OperationalError:
-		print "Error in MySQL query!"
-		print "Prefix fields with table name abbreviation:" 
-		print "\t(table_name.field_name)."
-		sys.exit(1)
-		
-        for hdr in self.DBcursor.fetchall():
-            if where_clause is None:
-                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
-            else:
-                self.DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s AND ("+where_clause+")",hdr["header_id"])
-            d = tempfile.mkdtemp()
-            try:
-                for candidate in self.DBcursor.fetchall():
-                    if self.pre_check_candidate(hdr,candidate):
-                        if self.with_files:
-                                try:
-                                    f = self.extract_file(d,candidate)
-                                except ValueError, e:
-                                    sys.stderr.write(str(e))
-                                    continue
-                                try:
-                                    self.act_on_candidate(hdr,candidate,f)
-                                except Exception, e:
-                                    print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
-				    raise
-                        else:
-                            try:
-                                self.act_on_candidate(hdr,candidate)
-                            except Exception, e:
-                                print "Exception raised while rating candidate %s: %s" % (candidate, e)
-				raise
-            finally:
-                shutil.rmtree(d)
+        DatabaseWalker.run(self,where_clause=where_clause)
 
     def rate_by_cand_id(self,pdm_cand_id):
 
@@ -318,7 +259,93 @@ def manual_classification(DBconn,candidate):
         return r["rank"]
     
 
+class Candidate:
+    def __init__(self, header_db, candidate_db, pfd_dir):
+        self.header_db = header_db
+        self.candidate_db = candidate_db
+        self.pfd_dir = pfd_dir
+
+        self._pfd = None
+        self._pfd_filename = None
+        self._dedispersed_pfd = None
+        self._bestprof = False
+        self._best_profile = None
+        self._profile_bin_var = None
+
+    def _extract_file(self):
+        dir = self.pfd_dir
+        f = get_one(self.DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
+        if f is None:
+            raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
+
+        filename = f["filename"]
+        pfd_filename = filename.split(".ps.gz")[0]
+
+        path = f["path"]
+        base, junk = filename.split('_DM')
+        rfn = os.path.join(dir,pfd_filename)
+        if not os.path.exists(rfn):
+            subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
+
+        self._pfd_filename = rfn
+
+    def _generate_bestprof(self):
+        if not os.path.exists(rfn+".bestprof"):
+            # Create bestprof file using 'show_pfd'
+            dir, pfdfn = os.path.split(rfn)
+            retcode = subprocess.call(["show_pfd",rfn,"-noxwin"],stdout=subprocess.PIPE)
+            #retcode = subprocess.call(["show_pfd",rfn,"-noxwin"])
+            if retcode:
+                raise ValueError("show_pfd failed with return code %d; pfd file is %s, directory contents are %s\n" % (retcode,rfn,sorted(os.listdir(dir))))
+            shutil.move(pfdfn+".bestprof", dir)
+            shutil.move(pfdfn+".ps", dir)
+
+    def pfd(self, bestprof=False):
+        change = False
+        if self._pfd is None:
+            self._extract_pfd()
+            change = True
+        if not self._bestprof:
+            self._generate_bestprof()
+            self._bestprof = True
+            change = True
+        if change:
+            self._pfd = prepfold.pfd(self._pfd_filename)
+        return self._pfd
+
+    def dedispersed_pfd(self, bestprof=False):
+        change = False
+        if self._pfd is None:
+            self.pfd(bestprof)
+            change = True
+        elif bestprof and not self._bestprof:
+            self._generate_bestprof()
+            self._bestprof = True
+            self._pfd = prepfold.pfd(self._pfd_filename)
+            change = True
+        if change:
+            self._dedispersed_pfd = prepfold.pfd(self._pfd_filename)
+            self._dedispersed_pfd.dedisperse(self.candidate_db["bestdm"])
+
+    def best_profile(self):
+        p = self.pfd(bestprof=True)
+        return p.bestprof
+
+    def profile_bin_var(self):
+        # Estimate this based on the data cube
+        p = self.pfd().profs
+        (n,m,r) = p.shape
+        return np.mean(np.var(p,axis=-1))/(n*m)
+
+    def subints_aligned(self,dm='best'):
+        if dm=='zero':
+            pass
+        elif dm=='best':
+            pass
+        else:
+            raise ValueError("Aligned subintegrations available only for dm 'zero' or 'best'")
+
 
 def usual_database():
-    import config as c
+    import DRIFT_config as c
     return MySQLdb.connect(host=c.host,db=c.database_v2,user=c.usrname,passwd=c.pw)
