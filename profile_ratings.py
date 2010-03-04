@@ -24,7 +24,7 @@ class ProfileRating(rating.DatabaseRater):
             else:
                 oldpfd = pfd_file
                 pfd_file = copy.deepcopy(pfd_file)
-                pfd_file.dedisperse(candidate["dm"])
+                pfd_file.dedisperse(doppler=1)
                 #if np.all(oldpfd.profs == pfd_file.profs):
                 pfd_file.profs[0,0,0]+=1
                 if np.all(oldpfd.profs == pfd_file.profs):
@@ -32,7 +32,7 @@ class ProfileRating(rating.DatabaseRater):
                 pfd_file.profs[0,0,0]-=1
                 cache["dedispersed_pfd"] = pfd_file
 
-            prof = pfd_file.combine_profs(1,1)[0,0]
+            prof = pfd_file.time_vs_phase().sum(axis=0)
             prof -= np.mean(prof)
             cache["profile"] = prof
         return self.rate_profile(hdr,candidate,prof,std,cache)
@@ -45,7 +45,7 @@ class DutyCycle(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Duty cycle",
-            1,
+            2,
             """Compute the duty cycle, that is, the fraction of profile
 bins in which the value is more than (max+mean)/2.""")
 
@@ -56,7 +56,7 @@ class PeakOverRMS(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Peak over RMS",
-            1,
+            2,
             """Compute the peak amplitude divided by the RMS amplitude.
 
 Specifically, compute (max(profile)-mean(profile))/std(profile).
@@ -72,10 +72,10 @@ if __name__=='__main__':
                 PeakOverRMS(D),
                ])
 
-class PrepfoldSigmaRating(rating.DatabaseRater):
+class PrepfoldSigmaRating(ProfileRating):
     def __init__(self, DBconn):
 	rating.DatabaseRater.__init__(self, DBconn, \
-	    version = 3, \
+	    version = 4, \
 	    name = "Prepfold Sigma", \
 	    description = "A re-calculation of the sigma value reported on " \
 			  "prepfold plots.\n\nCandidates where P(noise) ~ 0 " \
@@ -88,5 +88,5 @@ class PrepfoldSigmaRating(rating.DatabaseRater):
         chi2 = np.sum((profile-np.mean(profile))**2/std**2)
         df = len(profile)-1
 
-	return min(-scipy.stats.norm(scipy.stats.chi2(df).sf(chi2)),99)
+	return min(-scipy.stats.norm.ppf(scipy.stats.chi2(df).sf(chi2)),99)
 
