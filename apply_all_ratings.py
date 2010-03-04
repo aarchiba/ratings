@@ -18,9 +18,9 @@ def main():
                [gaussian_ratings.GaussianWidth(D), 
                 gaussian_ratings.GaussianHeight(D), 
                 gaussian_ratings.GaussianPhase(D), 
-                profile_ratings.PeakOverRMS(D),
                 harmonic_rating.HarmonicRating(D), 
                 profile_ratings.DutyCycle(D), 
+                profile_ratings.PrepfoldSigmaRating(D), 
                 pfd_ratings.RatioRating(D), 
                ],
               where_clause=where_clause)
