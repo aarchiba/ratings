@@ -14,7 +14,7 @@ class ProfileRating(rating.DatabaseRater):
         if "std" in cache:
             std = cache["std"]
         else:
-            std = np.std(pfd_file.profs)*np.sqrt(pfd_file.nsub*pfd_file.npart)
+            std = np.mean(np.std(pfd_file.profs,axis=-1))*np.sqrt(pfd_file.nsub*pfd_file.npart)
             cache["std"] = std
         if "profile" in cache:
             prof = cache["profile"]
