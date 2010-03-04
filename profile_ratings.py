@@ -14,7 +14,7 @@ class ProfileRating(rating.DatabaseRater):
         if "std" in cache:
             std = cache["std"]
         else:
-            std = np.mean(np.std(pfd_file.profs,axis=-1))*np.sqrt(pfd_file.nsub*pfd_file.npart)
+            std = np.sqrt(np.mean(np.var(pfd_file.profs,axis=-1)))*np.sqrt(pfd_file.nsub*pfd_file.npart)
             cache["std"] = std
         if "profile" in cache:
             prof = cache["profile"]
@@ -71,4 +71,22 @@ if __name__=='__main__':
                [DutyCycle(D), 
                 PeakOverRMS(D),
                ])
+
+class PrepfoldSigmaRating(rating.DatabaseRater):
+    def __init__(self, DBconn):
+	rating.DatabaseRater.__init__(self, DBconn, \
+	    version = 3, \
+	    name = "Prepfold Sigma", \
+	    description = "A re-calculation of the sigma value reported on " \
+			  "prepfold plots.\n\nCandidates where P(noise) ~ 0 " \
+			  "are rated as 99 since a proper sigma value " \
+			  "cannot be computed.", \
+	    with_files = True, \
+	    with_bestprof = True)
+
+    def rate_profile(self, hdr, candidate, profile, std, cache):
+        chi2 = np.sum((profile-np.mean(profile))**2/std**2)
+        df = len(profile)-1
+
+	return min(-scipy.stats.norm(scipy.stats.chi2(df).sf(chi2)),99)
 
