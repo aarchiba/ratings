@@ -74,22 +74,21 @@ def run(DBconn, ratings, where_clause=None):
 
                 if with_files:
                     ff = get_one(DBcursor,"SELECT * FROM pdm_plot_pointers WHERE pdm_cand_id = %s", candidate["pdm_cand_id"])
-                    if ff is None:
-                        raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-                    f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
-                    #try:
-                    #    f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
-                    #except Exception, e:
-                    #   sys.stderr.write(str(e))
+                    try:
+                        if ff is None:
+                            raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
+                        f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                    except Exception, e:
+                        sys.stderr.write(str(e))
                 else:
                     f = None
 
                 for r in rs:
-                    r.act_on_candidate(hdr,candidate,f,cache=cache)
-                    #try:
-                    #    r.act_on_candidate(hdr,candidate,f,cache=cache)
-                    #except Exception, e:
-                    #    print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+                    #r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    try:
+                        r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    except Exception, e:
+                        print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
         finally:
             shutil.rmtree(d)
 
