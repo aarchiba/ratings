@@ -37,15 +37,27 @@ def compare_ratings(ratings):
         rs.append(v)
     return rs
 
-
-if __name__=='__main__':
+def plot_rating_comparison(rating1, rating2):
     import numpy as np
     import pylab as plt
     #r = np.array(compare_ratings([("Gaussian Height", 5), ("Gaussian Height", 4)]))
-    r = np.array(compare_ratings([("Gaussian Height", 5), ("Gaussian Height", 3)]))
+    r = np.array(compare_ratings([rating1, rating2]))
     print "%d matches" % r.shape[0]
-    plt.plot(r[:,1],r[:,0],".")
-    plt.xlabel("Gaussian Height old")
-    plt.ylabel("Gaussian Height new")
+    plt.plot(r[:,0],r[:,1],".")
+    if isinstance(rating1, basestring):
+        plt.xlabel(rating1)
+    else:
+        rr, v = rating1
+        plt.xlabel("%s v. %d" % (rr,v))
+    if isinstance(rating2, basestring):
+        plt.ylabel(rating2)
+    else:
+        rr, v = rating2
+        plt.ylabel("%s v. %d" % (rr,v))
     plt.show()
+
+
+
+if __name__=='__main__':
+    plot_rating_comparison(("Gaussian Height", 5), ("Gaussian Height", 3))
 
