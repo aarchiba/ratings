@@ -54,7 +54,7 @@ def run(DBconn, ratings, where_clause=None, scramble=False):
     DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
     DBcursor.execute("SELECT * FROM headers")
-    hdrs = DBcursor.fetchall()[::-1]
+    hdrs = list(DBcursor.fetchall())[::-1]
     if scramble:
         random.shuffle(hdrs)
     for hdr in hdrs:
