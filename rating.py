@@ -8,6 +8,7 @@ import shutil
 import warnings
 import subprocess
 import numpy as np
+import random
 
 import prepfold
 
@@ -47,13 +48,16 @@ def extract_file(dir,candidate,f,with_bestprof):
         return prepfold.pfd(rfn)
 
 
-def run(DBconn, ratings, where_clause=None):
+def run(DBconn, ratings, where_clause=None, scramble=False):
     for r in ratings:
         r.setup_tables()
     DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
     DBcursor.execute("SELECT * FROM headers")
-    for hdr in DBcursor.fetchall()[::-1]:
+    hdrs = DBcursor.fetchall()[::-1]
+    if scramble:
+        random.shuffle(hdrs)
+    for hdr in hdrs:
         if where_clause is None:
             DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
         else:

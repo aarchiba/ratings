@@ -23,7 +23,8 @@ def main():
                 profile_ratings.PrepfoldSigmaRating(D), 
                 pfd_ratings.RatioRating(D), 
                ],
-              where_clause=where_clause)
+              where_clause=where_clause,
+              scramble=True)
 
 def print_summary(times):
     print "-"*55
