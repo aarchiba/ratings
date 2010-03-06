@@ -249,5 +249,5 @@ def manual_classification(DBconn,candidate):
     
 
 def usual_database():
-    import DRIFT_config as c
+    import config as c
     return MySQLdb.connect(host=c.host,db=c.database_v2,user=c.usrname,passwd=c.pw)
