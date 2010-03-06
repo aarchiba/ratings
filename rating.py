@@ -57,7 +57,8 @@ def run(DBconn, ratings, where_clause=None, scramble=False):
     hdrs = list(DBcursor.fetchall())[::-1]
     if scramble:
         random.shuffle(hdrs)
-    for hdr in hdrs:
+    for (i,hdr) in enumerate(hdrs):
+        print "Processing beam %d of %d" % (i,len(hdrs))
         if where_clause is None:
             DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
         else:
