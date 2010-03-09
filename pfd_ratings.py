@@ -1,7 +1,7 @@
 import numpy as np
 
 import rating
-import prepfold_plus
+import profile_rating
 import scipy.stats as stats
 
 import copy
@@ -10,6 +10,25 @@ class RatioRating(rating.DatabaseRater):
     def __init__(self,DBconn):
         rating.DatabaseRater.__init__(self,DBconn,version=4,
             name="Ratio Rating",
+            description="""Compare DM 0 and "best" DM
+
+Computes the ratio of RMS height for the profile dedispersed at
+DM 0 divided by that for the profile dedispersed at the best-fit DM.
+""",
+            with_files=True)
+
+    def rate_candidate(self, hdr, candidate, pfd, cache=None):
+        
+        p0 = pfd.time_vs_phase().sum(axis=0)
+        p1 = profile_rating.get_profile(cache, pfd)
+
+        return np.std(p0)/np.std(p1)
+
+
+class RatioRatingPeak(rating.DatabaseRater):
+    def __init__(self,DBconn):
+        rating.DatabaseRater.__init__(self,DBconn,version=4,
+            name="Ratio Rating Peak",
             description="""Compare DM 0 and "best" DM
 
 Computes the ratio of peak height for the profile dedispersed at
@@ -39,7 +58,7 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
             p1 -= np.mean(p1)
             cache["profile"] = p1
 
-        return np.std(p0)/np.std(p1)
+        return (np.amax(p0)-np.median(p0))/(np.amax(p1)-np.median(p1))
 
 
 if __name__=='__main__':
