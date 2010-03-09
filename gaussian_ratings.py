@@ -29,7 +29,7 @@ class GaussianHeight(GaussianRating):
     def __init__(self, DBconn):
         GaussianRating.__init__(self, DBconn,
             "Gaussian Height",
-            5,
+            6,
             """Compute the height of the best-fit Gaussian over the RMS amplitude.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -43,7 +43,7 @@ class GaussianWidth(GaussianRating):
     def __init__(self, DBconn):
         GaussianRating.__init__(self, DBconn,
             "Gaussian Width",
-            4,
+            5,
             """Compute the full width at half maxiumum of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -57,7 +57,7 @@ class GaussianPhase(GaussianRating):
     def __init__(self, DBconn):
         GaussianRating.__init__(self, DBconn,
             "Gaussian Phase",
-            4,
+            5,
             """Compute the peak phase of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -71,7 +71,7 @@ class GaussianSignificance(GaussianRating):
     def __init__(self, DBconn):
         GaussianRating.__init__(self, DBconn,
             "Gaussian Sig",
-            1,
+            2,
             """Compute the significance of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -82,7 +82,7 @@ class GaussianSignificance(GaussianRating):
 """)
 
     def rate_gaussian_profile(self,hdr,candidate,profile,std,G,cache):
-        return G.amplitude(len(profile))/(std*(G.fwhm()/(1./len(profile)))**(0.5))
+        return G.amplitude(len(profile))/(std/max(G.fwhm()/(1./len(profile)),1)**(0.5))
 
 if __name__=='__main__':
     D = rating.usual_database()

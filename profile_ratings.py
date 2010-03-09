@@ -12,10 +12,11 @@ def get_std(cache, pfd_file):
     else:
         std = np.sqrt(np.mean(np.var(pfd_file.profs,axis=-1)))*np.sqrt(pfd_file.nsub*pfd_file.npart)
         cache["std"] = std
+    return std
 
 def get_profile(cache, pfd_file):
     if "profile" in cache:
-        prof = cache["dedispersed_profile"]
+        prof = cache["profile"]
     else:
         if "dedispersed_pfd" in cache:
             pfd_file = cache["dedispersed_pfd"]
@@ -32,6 +33,7 @@ def get_profile(cache, pfd_file):
         prof = pfd_file.time_vs_phase().sum(axis=0)
         prof -= np.mean(prof)
         cache["profile"] = prof
+    return prof
 
 class ProfileRating(rating.DatabaseRater):
     def __init__(self, DBconn, name, version, description):
@@ -50,25 +52,43 @@ class DutyCycle(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Duty cycle",
-            2,
+            4,
             """Compute the duty cycle, that is, the fraction of profile
-bins in which the value is more than (max+mean)/2.""")
+bins in which the value is more than (max+median)/2.""")
 
     def rate_profile(self,hdr,candidate,profile,std,cache):
-        return np.sum(profile>(np.amax(profile)+np.mean(profile))/2.)/float(len(profile))
+        return np.sum(profile>(np.amax(profile)+np.median(profile))/2.)/float(len(profile))
 
 class PeakOverRMS(ProfileRating):
     def __init__(self, DBconn):
         ProfileRating.__init__(self, DBconn,
             "Peak over RMS",
-            2,
+            3,
             """Compute the peak amplitude divided by the RMS amplitude.
 
-Specifically, compute (max(profile)-mean(profile))/std(profile).
+Specifically, compute (max(profile)-median(profile))/std(profile).
 """)
 
     def rate_profile(self,hdr,candidate,profile,std,cache):
-        return (np.amax(profile)-np.mean(profile))/np.std(profile)
+        return (np.amax(profile)-np.median(profile))/np.std(profile)
+
+class PrepfoldSigmaRating(ProfileRating):
+    def __init__(self, DBconn):
+	rating.DatabaseRater.__init__(self, DBconn, \
+	    version = 5, \
+	    name = "Prepfold Sigma", \
+	    description = "A re-calculation of the sigma value reported on " \
+			  "prepfold plots.\n\nCandidates where P(noise) ~ 0 " \
+			  "are rated as 99 since a proper sigma value " \
+			  "cannot be computed.", \
+	    with_files = True, \
+	    with_bestprof = False)
+
+    def rate_profile(self, hdr, candidate, profile, std, cache):
+        chi2 = np.sum((profile-np.mean(profile))**2/std**2)
+        df = len(profile)-1
+
+	return min(-scipy.stats.norm.ppf(scipy.stats.chi2(df).sf(chi2)),99)
 
 if __name__=='__main__':
     D = rating.usual_database()
@@ -76,22 +96,4 @@ if __name__=='__main__':
                [DutyCycle(D), 
                 PeakOverRMS(D),
                ])
-
-class PrepfoldSigmaRating(ProfileRating):
-    def __init__(self, DBconn):
-	rating.DatabaseRater.__init__(self, DBconn, \
-	    version = 4, \
-	    name = "Prepfold Sigma", \
-	    description = "A re-calculation of the sigma value reported on " \
-			  "prepfold plots.\n\nCandidates where P(noise) ~ 0 " \
-			  "are rated as 99 since a proper sigma value " \
-			  "cannot be computed.", \
-	    with_files = True, \
-	    with_bestprof = True)
-
-    def rate_profile(self, hdr, candidate, profile, std, cache):
-        chi2 = np.sum((profile-np.mean(profile))**2/std**2)
-        df = len(profile)-1
-
-	return min(-scipy.stats.norm.ppf(scipy.stats.chi2(df).sf(chi2)),99)
 

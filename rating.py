@@ -9,6 +9,7 @@ import warnings
 import subprocess
 import numpy as np
 import random
+import traceback
 
 import prepfold
 
@@ -33,7 +34,9 @@ def extract_file(dir,candidate,f,with_bestprof):
                 tar = tarfile.open(os.path.join(path,base+"_pfd.tgz"),"r")
                 tar.extract_all(dir)
             else:
-                subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
+                retcode = subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
+                if retcode:
+                    raise ValueError("tar extraction failed with return code %d" % retcode)
         if with_bestprof:
             if not os.path.exists(rfn+".bestprof"):
                 # Create bestprof file using 'show_pfd'
@@ -70,6 +73,7 @@ def run(DBconn, ratings, where_clause=None, scramble=False):
                 rs = [r for r in ratings if r.pre_check_candidate(hdr,candidate)]
                 with_files = False
                 with_bestprof = False
+                have_files = False
 
                 for r in rs:
                     if r.with_files:
@@ -83,17 +87,23 @@ def run(DBconn, ratings, where_clause=None, scramble=False):
                         if ff is None:
                             raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
                         f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                        have_files = True
                     except Exception, e:
-                        sys.stderr.write(str(e))
+                        #traceback.print_exc()
+                        sys.stderr.write("Failed to extract file: %s" % str(e))
                 else:
                     f = None
 
                 for r in rs:
                     #r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    if r.with_files and not have_files:
+                        print "Files unavailable, skipping %s" % r.name
+                        continue
                     try:
                         r.act_on_candidate(hdr,candidate,f,cache=cache)
                     except Exception, e:
                         print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+                        #traceback.print_exc()
         finally:
             shutil.rmtree(d)
 
