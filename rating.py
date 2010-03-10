@@ -9,6 +9,7 @@ import warnings
 import subprocess
 import numpy as np
 import random
+import traceback
 
 import prepfold
 
@@ -49,21 +50,23 @@ def extract_file(dir,candidate,f,with_bestprof):
             pfd_tar_path = os.path.join(path,base+"_pfd.tar")
             pfd_tar_gz_path = os.path.join(path,base+"_pfd.tar.gz")
             if os.path.exists(tar_path):
-                subprocess.call(tar_cmd+["-f",tar_path])
+                retcode = subprocess.call(tar_cmd+["-f",tar_path])
             elif os.path.exists(tgz_path):
-                subprocess.call(tar_cmd+["-z","-f",tgz_path])
+                retcode = subprocess.call(tar_cmd+["-z","-f",tgz_path])
             elif os.path.exists(tar_gz_path):
-                subprocess.call(tar_cmd+["-z","-f",tar_gz_path])
+                retcode = subprocess.call(tar_cmd+["-z","-f",tar_gz_path])
             elif os.path.exists(pfd_tar_path):
-                subprocess.call(tar_cmd+["-f",pfd_tar_path])
+                retcode = subprocess.call(tar_cmd+["-f",pfd_tar_path])
             elif os.path.exists(pfd_tgz_path):
-                subprocess.call(tar_cmd+["-z","-f",pfd_tgz_path])
+                retcode = subprocess.call(tar_cmd+["-z","-f",pfd_tgz_path])
             elif os.path.exists(pfd_tar_gz_path):
-                subprocess.call(tar_cmd+["-z","-f",pfd_tar_gz_path])
+                retcode = subprocess.call(tar_cmd+["-z","-f",pfd_tar_gz_path])
             else:
                 raise ValueError("Cannot find tar file")
+            if retcode:
+                raise ValueError("tar extraction failed with return code %d" % retcode)
 
-	if with_bestprof:
+        if with_bestprof:
             if not os.path.exists(rfn+".bestprof"):
                 # Create bestprof file using 'show_pfd'
                 dir, pfdfn = os.path.split(rfn)
@@ -111,6 +114,7 @@ def run(DBconn, ratings, where_clause=None, scramble=False, limit=-1):
                 rs = [r for r in ratings if r.pre_check_candidate(hdr,candidate)]
                 with_files = False
                 with_bestprof = False
+                have_files = False
 
                 for r in rs:
                     if r.with_files:
@@ -123,18 +127,28 @@ def run(DBconn, ratings, where_clause=None, scramble=False, limit=-1):
                     try:
                         if ff is None:
                             raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
+<<<<<<< HEAD:rating.py
 			f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+=======
+                        f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+                        have_files = True
+>>>>>>> 1cbf2b730524b00a02507b537e0fa079db4444d6:rating.py
                     except Exception, e:
-                        sys.stderr.write(str(e))
+                        #traceback.print_exc()
+                        sys.stderr.write("Failed to extract file: %s" % str(e))
                 else:
                     f = None
 
                 for r in rs:
                     #r.act_on_candidate(hdr,candidate,f,cache=cache)
+                    if r.with_files and not have_files:
+                        print "Files unavailable, skipping %s" % r.name
+                        continue
                     try:
                         r.act_on_candidate(hdr,candidate,f,cache=cache)
                     except Exception, e:
                         print "Exception raised while rating candidate %s: %s" % (candidate["pdm_cand_id"], e)
+                        #traceback.print_exc()
         finally:
             shutil.rmtree(d)
 

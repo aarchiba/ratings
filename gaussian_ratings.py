@@ -11,7 +11,7 @@ from profile_ratings import ProfileRating
 
 class GaussianRating(ProfileRating):
     def __init__(self, DBconn, name, version, description):
-        ProfileRating.__init__(self,DBconn,name,version,description, with_files=True)
+        ProfileRating.__init__(self,DBconn,name,version,description)
 
     def rate_profile(self,hdr,candidate,profile,std,cache):
         if "gaussian" in cache:
@@ -27,9 +27,9 @@ class GaussianRating(ProfileRating):
 
 class GaussianHeight(GaussianRating):
     def __init__(self, DBconn):
-        ProfileRating.__init__(self, DBconn,
+        GaussianRating.__init__(self, DBconn,
             "Gaussian Height",
-            5,
+            6,
             """Compute the height of the best-fit Gaussian over the RMS amplitude.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -41,9 +41,9 @@ class GaussianHeight(GaussianRating):
 
 class GaussianWidth(GaussianRating):
     def __init__(self, DBconn):
-        ProfileRating.__init__(self, DBconn,
+        GaussianRating.__init__(self, DBconn,
             "Gaussian Width",
-            4,
+            5,
             """Compute the full width at half maxiumum of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -55,9 +55,9 @@ class GaussianWidth(GaussianRating):
 
 class GaussianPhase(GaussianRating):
     def __init__(self, DBconn):
-        ProfileRating.__init__(self, DBconn,
+        GaussianRating.__init__(self, DBconn,
             "Gaussian Phase",
-            4,
+            5,
             """Compute the peak phase of the best-fit Gaussian.
 
             The function being fit is not actually a Gaussian, it's a von Mises
@@ -67,6 +67,22 @@ class GaussianPhase(GaussianRating):
     def rate_gaussian_profile(self,hdr,candidate,profile,std,G,cache):
         return G.mu
 
+class GaussianSignificance(GaussianRating):
+    def __init__(self, DBconn):
+        GaussianRating.__init__(self, DBconn,
+            "Gaussian Sig",
+            2,
+            """Compute the significance of the best-fit Gaussian.
+
+            The function being fit is not actually a Gaussian, it's a von Mises
+            distribution (exp(k*cos(theta))). This compares the Gaussian height
+            to the expected standard deviation of an average over the 
+            Gaussian width.
+
+""")
+
+    def rate_gaussian_profile(self,hdr,candidate,profile,std,G,cache):
+        return G.amplitude(len(profile))/(std/max(G.fwhm()/(1./len(profile)),1)**(0.5))
 
 if __name__=='__main__':
     D = rating.usual_database()
