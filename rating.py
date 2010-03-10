@@ -127,12 +127,8 @@ def run(DBconn, ratings, where_clause=None, scramble=False, limit=-1):
                     try:
                         if ff is None:
                             raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-<<<<<<< HEAD:rating.py
-			f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
-=======
                         f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
                         have_files = True
->>>>>>> 1cbf2b730524b00a02507b537e0fa079db4444d6:rating.py
                     except Exception, e:
                         #traceback.print_exc()
                         sys.stderr.write("Failed to extract file: %s" % str(e))
