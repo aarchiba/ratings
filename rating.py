@@ -12,6 +12,7 @@ import random
 
 import prepfold
 
+import config as c
 
 def get_one(cursor,cmd,arg=None):
     cursor.execute(cmd,arg)
@@ -26,15 +27,43 @@ def extract_file(dir,candidate,f,with_bestprof):
 
         path = f["path"]
         base, junk = filename.split('_DM')
-        rfn = os.path.join(dir,pfd_filename)
-        if not os.path.exists(rfn):
-            if False:
-                # FIXME: double-check none starts with /
-                tar = tarfile.open(os.path.join(path,base+"_pfd.tgz"),"r")
-                tar.extract_all(dir)
+        
+	# Get filename of pfd file ("rfn")
+	if c.survey=="PALFA":
+            beam = base.split("_")[-1][0] # PALFA beam number
+            rfn = os.path.join(dir,beam,pfd_filename) # PALFA pfd files are inside subdirectory in tarball
+        elif c.survey=="DRIFT":
+            rfn = os.path.join(dir,pfd_filename)
+        else:
+            raise ValueError("Unknown survey '%s'" % c.survey)
+        
+	if not os.path.exists(rfn):
+	    # Un-tarring pfd files
+	    tar_cmd = ["tar","-C",dir,"--wildcards","-x", "*.pfd"]
+            
+            # PALFA tarballs don't have _pfd in the filename
+            tgz_path = os.path.join(path,base+".tgz")
+            tar_path = os.path.join(path,base+".tar")
+            tar_gz_path = os.path.join(path,base+".tar.gz")
+            pfd_tgz_path = os.path.join(path,base+"_pfd.tgz")
+            pfd_tar_path = os.path.join(path,base+"_pfd.tar")
+            pfd_tar_gz_path = os.path.join(path,base+"_pfd.tar.gz")
+            if os.path.exists(tar_path):
+                subprocess.call(tar_cmd+["-f",tar_path])
+            elif os.path.exists(tgz_path):
+                subprocess.call(tar_cmd+["-z","-f",tgz_path])
+            elif os.path.exists(tar_gz_path):
+                subprocess.call(tar_cmd+["-z","-f",tar_gz_path])
+            elif os.path.exists(pfd_tar_path):
+                subprocess.call(tar_cmd+["-f",pfd_tar_path])
+            elif os.path.exists(pfd_tgz_path):
+                subprocess.call(tar_cmd+["-z","-f",pfd_tgz_path])
+            elif os.path.exists(pfd_tar_gz_path):
+                subprocess.call(tar_cmd+["-z","-f",pfd_tar_gz_path])
             else:
-                subprocess.call(["tar","-C",dir,"-x","-z","-f",os.path.join(path,base+"_pfd.tgz")])
-        if with_bestprof:
+                raise ValueError("Cannot find tar file")
+
+	if with_bestprof:
             if not os.path.exists(rfn+".bestprof"):
                 # Create bestprof file using 'show_pfd'
                 dir, pfdfn = os.path.split(rfn)
@@ -48,12 +77,24 @@ def extract_file(dir,candidate,f,with_bestprof):
         return prepfold.pfd(rfn)
 
 
-def run(DBconn, ratings, where_clause=None, scramble=False):
+def run(DBconn, ratings, where_clause=None, scramble=False, limit=-1):
     for r in ratings:
         r.setup_tables()
     DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
-    DBcursor.execute("SELECT * FROM headers")
+    if limit < 0:
+        DBcursor.execute("SELECT h.* FROM pdm_candidates AS c " \
+                         "LEFT JOIN headers AS h " \
+                         "ON h.header_id=c.header_id " \
+                         "GROUP BY c.header_id " \
+                         "ORDER BY MAX(c.proc_date) DESC")
+    else:
+        DBcursor.execute("SELECT h.* FROM pdm_candidates AS c " \
+                         "LEFT JOIN headers AS h " \
+                         "ON h.header_id=c.header_id " \
+                         "GROUP BY c.header_id " \
+                         "ORDER BY MAX(c.proc_date) DESC" \
+                         "LIMIT %d" % limit)
     hdrs = list(DBcursor.fetchall())[::-1]
     if scramble:
         random.shuffle(hdrs)
@@ -82,7 +123,7 @@ def run(DBconn, ratings, where_clause=None, scramble=False):
                     try:
                         if ff is None:
                             raise ValueError("Warning: candidate %d does not appear to have file information\n" % candidate['pdm_cand_id'])
-                        f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
+			f = extract_file(d,candidate,ff,with_bestprof=with_bestprof)
                     except Exception, e:
                         sys.stderr.write(str(e))
                 else:
@@ -197,7 +238,7 @@ class DatabaseRater(DatabaseWalker):
         cv = get_one(self.DBcursor,"SELECT * FROM rating_type_current_versions WHERE name=%s", self.name)
         if cv:
             if self.version<cv["current_version"]:
-                warnings.warn("Newer version of statistic (%d>%d) already exists in database" % (cv["current_version"],self.version))
+                warnings.warn("Newer version of %s (%d>%d) already exists in database" % (self.name, cv["current_version"],self.version))
             elif self.version>cv["current_version"]:
                 self.DBcursor.execute("UPDATE rating_type_current_versions SET rating_id=%s, current_version=%s WHERE name=%s", (self.rating_id, self.version, self.name))
         else:
@@ -250,5 +291,4 @@ def manual_classification(DBconn,candidate):
     
 
 def usual_database():
-    import config as c
     return MySQLdb.connect(host=c.host,db=c.database_v2,user=c.usrname,passwd=c.pw)

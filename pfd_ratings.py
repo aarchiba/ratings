@@ -18,10 +18,12 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
             with_files=True)
 
     def rate_candidate(self, hdr, candidate, pfd, cache=None):
-        
+	
+	# Un-dedispersed profile        
         p0 = pfd.time_vs_phase().sum(axis=0)
 
         if "profile" in cache:
+	    # Dedispersed profile
             p1 = cache["profile"]
         else:
             if "dedispersed_pfd" in cache:
@@ -30,10 +32,10 @@ DM 0 divided by that for the profile dedispersed at the best-fit DM.
                 oldpfd = pfd
                 pfd = copy.deepcopy(pfd)
                 pfd.dedisperse(doppler=1)
-                pfd_file.profs[0,0,0]+=1
+                pfd.profs[0,0,0]+=1
                 if np.all(oldpfd.profs == pfd.profs):
                     raise ValueError("copy failed to copy the pfd file")
-                pfd_file.profs[0,0,0]-=1
+                pfd.profs[0,0,0]-=1
                 cache["dedispersed_pfd"] = pfd
             p1 = pfd.time_vs_phase().sum(axis=0)
             p1 -= np.mean(p1)

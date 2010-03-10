@@ -82,7 +82,7 @@ class PrepfoldSigmaRating(ProfileRating):
 			  "are rated as 99 since a proper sigma value " \
 			  "cannot be computed.", \
 	    with_files = True, \
-	    with_bestprof = True)
+	    with_bestprof = False)
 
     def rate_profile(self, hdr, candidate, profile, std, cache):
         chi2 = np.sum((profile-np.mean(profile))**2/std**2)
