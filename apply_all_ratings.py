@@ -55,7 +55,7 @@ if __name__=='__main__':
     parser.add_option("-n", "--only", dest="n", default=-1, type="int", \
                         help="Only rate the first 'n' beams. " \
                              "(Default: -1, rate all beams.)")
-    parser.add_option("-w", "--where", dest=None, default="", \
+    parser.add_option("-w", "--where", dest=None, default=None, \
                         help="Where clause to be used when querying " \
                              "the database. (Default: no where clause.)")
     options, args = parser.parse_args()

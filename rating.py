@@ -86,23 +86,26 @@ def run(DBconn, ratings, where_clause=None, scramble=False, limit=-1):
     DBcursor = MySQLdb.cursors.DictCursor(DBconn)
 
     if limit < 0:
-        DBcursor.execute("SELECT h.* FROM pdm_candidates AS c " \
-                         "LEFT JOIN headers AS h " \
-                         "ON h.header_id=c.header_id " \
-                         "GROUP BY c.header_id " \
-                         "ORDER BY MAX(c.proc_date) DESC")
+        query = "SELECT h.*, MAX(c.proc_date) AS most_recent " \
+                "FROM pdm_candidates AS c " \
+                "LEFT JOIN headers AS h " \
+                "ON h.header_id=c.header_id " \
+                "GROUP BY c.header_id " \
+                "ORDER BY most_recent DESC"
     else:
-        DBcursor.execute("SELECT h.* FROM pdm_candidates AS c " \
-                         "LEFT JOIN headers AS h " \
-                         "ON h.header_id=c.header_id " \
-                         "GROUP BY c.header_id " \
-                         "ORDER BY MAX(c.proc_date) DESC" \
-                         "LIMIT %d" % limit)
-    hdrs = list(DBcursor.fetchall())[::-1]
+        query = "SELECT h.*, MAX(c.proc_date) AS most_recent " \
+                "FROM pdm_candidates AS c " \
+                "LEFT JOIN headers AS h " \
+                "ON h.header_id=c.header_id " \
+                "GROUP BY c.header_id " \
+                "ORDER BY most_recent DESC " \
+                "LIMIT %d" % limit
+    DBcursor.execute(query)
+    hdrs = list(DBcursor.fetchall())
     if scramble:
         random.shuffle(hdrs)
     for (i,hdr) in enumerate(hdrs):
-        print "Processing beam %d of %d" % (i,len(hdrs))
+        print "Processing beam %d of %d" % (i+1,len(hdrs))
         if where_clause is None:
             DBcursor.execute("SELECT * FROM pdm_candidates WHERE header_id = %s",hdr["header_id"])
         else:
