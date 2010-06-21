@@ -1,0 +1,83 @@
+Candidate ratings
+=================
+
+This package is designed to walk through a database of pulsar survey
+detection candidates and assign "ratings" to each one. A "rating" is an
+automatically computed number that measures some aspect of the candidate;
+for example, one rating might estimate the fraction of its period that the
+candidate is on, so that a short spike might have a rating of 0.01 while
+a sine wave would have a rating of 0.5. The computed ratings are stored
+in the database; the idea is that a human will compose a query to select
+candidates whose combination of ratings suggests that they may be real.
+
+
+Database format
+---------------
+
+The database format is currently that used for the GBT 350 MHz drift-scan
+survey, which is essentially the same as that used for the PALFA
+survey. This database format records certain essential information
+- e.g. period and DM - in the database itself, but the detailed
+information about each candidate is stored in ".pfd" files external to
+the database. The locations of these files are encoded in the database.
+
+Setup/Installation
+------------------
+
+You will need to create and populate a database of candidates, probably
+using the driftscan/PALFA database scripts. These scripts include a
+config file, DRIFT_config.py or PALFA_config.py; you will need to create
+a symbolic link from config.py pointing to it.
+
+Running the ratings
+-------------------
+
+Use the script apply_all_ratings.py. It takes command-line options,
+including --help. The ratings are executed in a framework that
+avoids recalculating ratings unless they have changed and that reuses
+calculations where possible.
+
+Using the ratings
+-----------------
+
+Patrick's Ms. Pulsar Finder is capable of running queries that include
+ratings, as is the under-development web-based candidate viewer. MySQL
+queries are a little more complicated; the easiest way to construct one
+is to start with Ms. Pulsar Finder, and switch to "advanced mode".
+
+Overview of the code
+------------------
+
+The basic infrastucture for running ratings is in rating.py. It
+establishes a basic object representing a rating of a particular
+candidate and handles all database interaction; to calculate a rating
+for every candidate in the database, you call the function "run" in the
+rating module.
+
+Individual ratings are in various files; each one is implemented
+as a subclass of some appropriate parent class. The idea is that
+the parent classes handle all the work of extracting .pfd files and
+computing profiles and background levels, so that each rating has
+direct access to whichever processed data it needs. These classes are
+also self-documenting; in particular, they have a version number, a
+name, and a long description. The name serves to identify the rating
+conceptually, and the version number is used to determine whether a
+rating should be recomputed. Queries normally only use the most recent
+version of a rating. The long description of a rating should describe
+what it calculates and what values you can expect.
+
+If you want to add a rating, the first question is what information
+you need: do you simply need the numbers in the database already, or
+the folded profile, or the whole datacube of intensity as a function
+of frequency, time, and pulse phase? Once that is decided, I recommend
+taking a look at the existing ratings to find one that uses the same
+input data. Then copy that code, which will be subclassing the correct
+class to provide you with the data you need. You'll want to change the
+name, version number and description, then you'll want to replace the
+implementation with your own. Finally, you'll want to add your rating
+to the list in apply_all_ratings.py.
+
+If you want to modify a rating, siply change the implementation and long
+description and increase the version number.
+
+
